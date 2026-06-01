@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>文字互动 - 移动端完美密码页版</title>
+    <style>
+        /* ================= 核心响应式变量 ================= */
+        :root {
+            --frame-out: 40px;
+            --frame-in: 8px;
+            --header-top: 85px;
+            --text-pad-h: 120px;
+            --text-pad-v: 140px;
+            --font-size-story: 1.05em;
+            --font-size-prompt: 0.9em;
+            --line-height-story: 1.9;
+            --letter-spacing-story: 1px;
+            --prompt-padding: 30px 20px;
+            --corner-size: 24px;
+            --mid-size: 15px;
+            
+            /* ⭐️ 新增：密码页专属响应式变量 */
+            --pwd-title-size: 1.6em;
+            --pwd-title-ls: 4px;
+            --pwd-subtitle-size: 0.8em;
+            --pwd-subtitle-ls: 8px;
+        }
+
+        @media (max-width: 768px) {
+            :root {
+                --frame-out: 15px;
+                --frame-in: 5px;
+                --header-top: 45px;
+                --text-pad-h: 45px;
+                --text-pad-v: 100px;
+                --font-size-story: 0.98em;
+                --font-size-prompt: 0.85em;
+                --line-height-story: 1.7;
+                --letter-spacing-story: 0.5px;
+                --prompt-padding: 20px 15px;
+                --corner-size: 18px;
+                --mid-size: 12px;
+                
+                /* ⭐️ 核心修复：手机端密码页标题自动收缩，防贴边 */
+                --pwd-title-size: 1.3em;
+                --pwd-title-ls: 3px;
+                --pwd-subtitle-size: 0.6em;
+                --pwd-subtitle-ls: 3px;
+            }
+        }
+
+        /* ================= 基础全局设置 ================= */
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #F8F5F0; 
+            color: #383229; 
+            font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+            font-weight: 400;
+            cursor: pointer;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent; 
+            overflow-x: hidden; 
+            overflow-y: auto; 
+        }
+
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(179, 146, 78, 0.2); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(179, 146, 78, 0.5); }
+
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0; left: 0; right: 0; height: 55vh;
+            background: radial-gradient(ellipse at 50% -10%, rgba(218, 165, 32, 0.08) 0%, rgba(179, 146, 78, 0.03) 40%, transparent 70%);
+            pointer-events: none;
+            z-index: 9997;
+        }
+
+        body::after {
+            content: "";
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(circle at center, transparent 20%, rgba(20, 15, 10, 0.06) 100%);
+            pointer-events: none;
+            z-index: 9998;
+        }
+
+        #game-wrapper {
+            display: flex;
+            flex-direction: column;
+            justify-content: center; 
+            align-items: center;
+            min-height: 100vh;
+            width: 100%;
+            box-sizing: border-box;
+            padding: var(--text-pad-v) var(--text-pad-h);
+            position: relative; 
+        }
+
+        /* ================= 鎏金花纹边框 ================= */
+        .church-frame {
+            position: fixed;
+            top: var(--frame-out); bottom: var(--frame-out);
+            left: var(--frame-out); right: var(--frame-out);
+            border: 1px solid rgba(179, 146, 78, 0.25); 
+            pointer-events: none; 
+            z-index: 9999;
+            transition: all 0.5s ease; 
+        }
+        
+        .church-frame::before {
+            content: "";
+            position: absolute;
+            top: var(--frame-in); bottom: var(--frame-in);
+            left: var(--frame-in); right: var(--frame-in);
+            border: 2px double rgba(179, 146, 78, 0.4); 
+            box-shadow: inset 0 0 60px rgba(179, 146, 78, 0.03); 
+            transition: all 0.5s ease;
+        }
+        
+        .ornament-corner, .ornament-mid {
+            position: absolute;
+            font-family: "Georgia", "Times New Roman", serif; 
+            background-color: transparent; 
+            color: rgba(179, 146, 78, 0.6); 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-shadow: 
+                0 0 3px #F8F5F0, 0 0 3px #F8F5F0, 
+                0 0 8px #F8F5F0, 0 0 12px #F8F5F0; 
+            transition: all 0.5s ease;
+        }
+
+        .ornament-corner { font-size: var(--corner-size); }
+        .corner-tl { top: var(--frame-in); left: var(--frame-in); transform: translate(-50%, -50%); }
+        .corner-tr { top: var(--frame-in); right: var(--frame-in); transform: translate(50%, -50%); }
+        .corner-bl { bottom: var(--frame-in); left: var(--frame-in); transform: translate(-50%, 50%); }
+        .corner-br { bottom: var(--frame-in); right: var(--frame-in); transform: translate(50%, 50%); }
+
+        .ornament-mid { font-size: var(--mid-size); }
+        .mid-top { top: var(--frame-in); left: 50%; transform: translate(-50%, -50%); }
+        .mid-bottom { bottom: var(--frame-in); left: 50%; transform: translate(-50%, 50%); }
+        .mid-left { top: 50%; left: var(--frame-in); transform: translate(-50%, -50%); }
+        .mid-right { top: 50%; right: var(--frame-in); transform: translate(50%, -50%); }
+
+        /* ================= 古典页眉 ================= */
+        .page-header {
+            position: fixed;
+            top: var(--header-top);
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 85%;
+            max-width: 450px;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .ph-line {
+            flex-grow: 1;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(179, 146, 78, 0.25) 50%, transparent);
+        }
+
+        .ph-text {
+            font-family: "Georgia", "Times New Roman", serif;
+            font-size: 0.65em;
+            color: #A69D91;
+            letter-spacing: 5px;
+            margin: 0 15px;
+            margin-right: 10px; 
+            text-transform: uppercase;
+            opacity: 0.75;
+        }
+
+        /* ================= 密码页样式 ================= */
+        #password-screen {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: absolute;
+            z-index: 50;
+            opacity: 1;
+            transition: opacity 1s ease-in-out;
+            width: 100%;
+            height: 100%;
+        }
+
+        .pwd-content-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            animation: floatUp 1.5s ease-out forwards;
+            width: 80%; /* 防止过宽 */
+        }
+
+        @keyframes floatUp {
+            0% { opacity: 0; transform: translateY(20px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        .pwd-icon {
+            color: #C0A16B;
+            font-size: 14px;
+            margin-bottom: 25px;
+            letter-spacing: 10px;
+            text-shadow: 0 0 12px rgba(179, 146, 78, 0.5);
+            display: flex;
+            align-items: center;
+        }
+
+        .pwd-icon::before, .pwd-icon::after {
+            content: "";
+            display: block;
+            width: 40px;
+            height: 1px;
+            background: linear-gradient(to right, transparent, rgba(179, 146, 78, 0.4), transparent);
+            margin: 0 15px;
+        }
+
+        .pwd-title {
+            font-family: "Noto Serif CJK SC", "Songti SC", serif;
+            font-size: var(--pwd-title-size);
+            color: #383229;
+            letter-spacing: var(--pwd-title-ls);
+            margin: 0 0 12px 0;
+            margin-right: calc(var(--pwd-title-ls) * -1); /* 自动抵消偏移 */
+            font-weight: 400; 
+            text-shadow: 0px 1px 2px rgba(56, 50, 41, 0.1);
+            text-align: center;
+        }
+
+        .pwd-subtitle {
+            font-family: "Georgia", "Times New Roman", serif;
+            font-size: var(--pwd-subtitle-size);
+            color: #9c9284;
+            letter-spacing: var(--pwd-subtitle-ls);
+            margin: 0 0 45px 0;
+            margin-right: calc(var(--pwd-subtitle-ls) * -1); /* 自动抵消偏移 */
+            font-style: italic;
+            text-transform: uppercase;
+            position: relative;
+            text-align: center;
+        }
+
+        .pwd-subtitle::after {
+            content: "";
+            position: absolute;
+            bottom: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 1px;
+            height: 15px;
+            background-color: rgba(179, 146, 78, 0.35);
+        }
+
+        #pwd-input {
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid rgba(179, 146, 78, 0.3);
+            color: #383229;
+            font-size: 1.4em;
+            text-align: center;
+            width: 65%;
+            max-width: 220px;
+            padding: 10px 0;
+            margin-top: 15px;
+            margin-bottom: 40px;
+            outline: none;
+            letter-spacing: 12px; 
+            font-family: inherit;
+            transition: all 0.4s ease;
+            user-select: text;
+            -webkit-user-select: text;
+        }
+
+        #pwd-input:focus {
+            border-bottom: 1px solid rgba(179, 146, 78, 0.8);
+            transform: scale(1.02); 
+        }
+
+        #pwd-submit {
+            font-family: "Noto Serif CJK SC", "Songti SC", serif;
+            font-size: 0.85em;
+            color: #C0A16B;
+            letter-spacing: 8px;
+            margin-right: -8px;
+            padding: 12px 40px;
+            background: transparent;
+            border: 1px solid rgba(179, 146, 78, 0.15);
+            border-radius: 1px;
+            transition: all 0.4s ease;
+            text-transform: uppercase;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #pwd-submit::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(179, 146, 78, 0.04);
+            transform: scaleY(0);
+            transform-origin: bottom;
+            transition: transform 0.4s ease;
+            z-index: -1;
+        }
+
+        #pwd-submit:hover::before, #pwd-submit:active::before {
+            transform: scaleY(1);
+        }
+
+        #pwd-submit:hover, #pwd-submit:active {
+            border-color: rgba(179, 146, 78, 0.6);
+            color: #A68740;
+            box-shadow: 0 0 15px rgba(179, 146, 78, 0.1);
+        }
+
+        #pwd-error {
+            font-family: "Noto Serif CJK SC", "Songti SC", serif;
+            font-size: 0.8em;
+            color: #A35E5E;
+            letter-spacing: 3px;
+            margin-top: 25px;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            height: 20px;
+        }
+        
+        /* ================= 内容区排版 ================= */
+        #game-container {
+            width: 100%;
+            max-width: 560px; 
+            box-sizing: border-box;
+            z-index: 1;
+            display: none; 
+            flex-direction: column;
+            position: relative;
+            opacity: 0; 
+            transition: opacity 1.5s ease-in-out; 
+        }
+
+        #story-text {
+            font-size: var(--font-size-story); 
+            line-height: var(--line-height-story); 
+            letter-spacing: var(--letter-spacing-story); 
+            min-height: 120px;
+            margin-bottom: 50px; 
+            text-align: justify;
+            text-justify: inter-ideograph; 
+            word-break: break-word; 
+            text-shadow: 0px 0px 1px rgba(56, 50, 41, 0.15); 
+            font-weight: 300; 
+        }
+
+        #prompt-box {
+            position: relative;
+            padding: var(--prompt-padding); 
+            opacity: 0; 
+            transform: translateY(15px); 
+            transition: opacity 0.8s ease-out, transform 0.8s ease-out; 
+            text-align: center;
+            min-height: 80px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #prompt-box::before, #prompt-box::after {
+            content: "";
+            position: absolute;
+            left: 15%; right: 15%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(179, 146, 78, 0.4), transparent);
+        }
+        #prompt-box::before { top: 0; }
+        #prompt-box::after { bottom: 0; }
+
+        #prompt-box.visible {
+            opacity: 1;
+            transform: translateY(0);
+            background: radial-gradient(ellipse at center, rgba(179, 146, 78, 0.04) 0%, transparent 60%);
+        }
+
+        .prompt-icon {
+            color: #C0A16B;
+            font-size: 12px;
+            margin-bottom: 12px;
+            letter-spacing: 4px;
+            opacity: 0;
+            transition: opacity 1s ease-in;
+        }
+        #prompt-box.visible .prompt-icon { opacity: 0.8; }
+
+        #prompt-text {
+            color: #8A7F70; 
+            font-size: var(--font-size-prompt);
+            line-height: 1.8; 
+            margin: 0;
+            text-align: center; 
+            letter-spacing: 1px; 
+            font-weight: 400;
+        }
+
+        /* ================= 环形倒计时器 ================= */
+        #timer-wrapper {
+            position: relative;
+            margin-top: 20px;
+            width: 70px;
+            height: 70px;
+            display: none; 
+            justify-content: center;
+            align-items: center;
+        }
+
+        .timer-svg {
+            position: absolute;
+            top: 0; left: 0;
+            transform: rotate(-90deg); 
+            filter: drop-shadow(0 0 5px rgba(179, 146, 78, 0.3)); 
+        }
+
+        .timer-circle-bg {
+            fill: none;
+            stroke: rgba(179, 146, 78, 0.15); 
+            stroke-width: 1.5;
+        }
+
+        .timer-circle-fg {
+            fill: none;
+            stroke: #C0A16B; 
+            stroke-width: 1.5;
+            stroke-linecap: round; 
+            stroke-dasharray: 208; 
+            stroke-dashoffset: 0; 
+        }
+
+        @keyframes drainRing {
+            from { stroke-dashoffset: 0; }
+            to { stroke-dashoffset: 208; } 
+        }
+
+        #countdown-timer {
+            font-family: "Georgia", serif; 
+            font-style: italic; 
+            font-size: 1.8em; 
+            color: #C0A16B; 
+            margin: 0;
+            font-weight: normal; 
+            letter-spacing: 0; 
+            text-shadow: 0 0 10px rgba(179, 146, 78, 0.4); 
+            line-height: 1; 
+            transform: translateX(-2px); 
+        }
+
+        /* ================= 底部点击提示 ================= */
+        #click-hint {
+            position: fixed;
+            bottom: max(35px, var(--frame-out) + 20px); 
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.7em;
+            color: #B0A89F; 
+            transition: opacity 0.8s;
+            z-index: 1;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            text-align: center;
+            width: 100%;
+            display: none; 
+            opacity: 0;
+        }
+
+        .blinking {
+            animation: blink 4s ease-in-out infinite; 
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 0.1; }
+            50% { opacity: 0.7; }
+        }
+
+        /* ================= 结局页面样式 ================= */
+        #ending-screen {
+            display: none; 
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            opacity: 0; 
+            transition: opacity 2s ease-in-out; 
+            z-index: 10;
+            text-align: center;
+        }
+
+        #ending-title {
+            font-family: "Snell Roundhand", "Edwardian Script ITC", "Monotype Corsiva", "Apple Chancery", cursive;
+            font-size: 4.5em; 
+            color: #C0A16B;
+            letter-spacing: 2px; 
+            margin: 0 0 10px 0;
+            font-weight: normal;
+            text-shadow: 0 0 15px rgba(179, 146, 78, 0.4);
+        }
+
+        #ending-subtitle {
+            font-family: "Noto Serif CJK SC", "Songti SC", serif; 
+            font-size: 1.1em;
+            color: #8A7F70;
+            letter-spacing: 4px;
+            margin: 0;
+            margin-right: -4px;
+        }
+
+        #restart-btn {
+            font-size: 0.85em;
+            color: #C0A16B;
+            letter-spacing: 4px;
+            padding: 8px 25px;
+            margin-top: 50px;
+            border: 1px solid rgba(179, 146, 78, 0.2);
+            border-radius: 2px;
+            transition: all 0.5s ease;
+            text-transform: uppercase;
+            opacity: 0; 
+            cursor: pointer;
+        }
+
+        #restart-btn:hover, #restart-btn:active {
+            background-color: rgba(179, 146, 78, 0.05);
+            border-color: rgba(179, 146, 78, 0.5);
+        }
+
+        /* ================= 分支按钮样式 ================= */
+        .choice-btn {
+            margin: 15px auto;
+            padding: 12px 20px;
+            border: 1px solid rgba(179, 146, 78, 0.4);
+            color: #C0A16B;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s;
+            font-family: "Noto Serif CJK SC", "Songti SC", serif;
+            width: 80%;
+            background: rgba(179, 146, 78, 0.05);
+        }
+
+        .choice-btn:hover {
+            background: rgba(179, 146, 78, 0.15);
+            border-color: rgba(179, 146, 78, 0.8);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="church-frame">
+        <div class="ornament-corner corner-tl">⚜</div>
+        <div class="ornament-corner corner-tr">⚜</div>
+        <div class="ornament-corner corner-bl">⚜</div>
+        <div class="ornament-corner corner-br">⚜</div>
+        
+        <div class="ornament-mid mid-top">♦</div>
+        <div class="ornament-mid mid-bottom">♦</div>
+        <div class="ornament-mid mid-left">♦</div>
+        <div class="ornament-mid mid-right">♦</div>
+    </div>
+
+    <div id="game-wrapper">
+        
+        <div class="page-header">
+            <div class="ph-line"></div>
+            <div class="ph-text">Liber I ✦ Confessio</div>
+            <div class="ph-line"></div>
+        </div>
+        
+        <div id="password-screen">
+            <div class="pwd-content-wrapper">
+                <div class="pwd-icon">✦</div>
+                <h2 class="pwd-title">禁忌的忏悔录</h2>
+                <p class="pwd-subtitle">Arcanum Confessionis</p>
+                
+                <input type="password" id="pwd-input" autocomplete="off" maxlength="8" />
+                <div id="pwd-submit">开启</div>
+                
+                <div id="pwd-error">秘钥不正确</div>
+            </div>
+        </div>
+
+        <div id="game-container">
+            <div id="story-text"></div>
+            
+            <div id="prompt-box">
+                <div class="prompt-icon">✦ ✦ ✦</div>
+                <p id="prompt-text"></p>
+                <div id="choice-container"></div>
+                
+                <div id="timer-wrapper">
+                    <svg class="timer-svg" width="70" height="70" viewBox="0 0 70 70">
+                        <circle class="timer-circle-bg" cx="35" cy="35" r="33"></circle>
+                        <circle class="timer-circle-fg" id="timer-path" cx="35" cy="35" r="33"></circle>
+                    </svg>
+                    <div id="countdown-timer"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="ending-screen">
+            <h1 id="ending-title">The End</h1>
+            <p id="ending-subtitle">愿主宽恕一切罪与欲</p>
+            <div id="restart-btn">重新开启</div>
+        </div>
+    </div>
+
+    <div id="click-hint" class="blinking">点击屏幕继续</div>
+
+    <script>
+       const scriptData = [
+            { story: "午后的阳光穿过高耸的彩色玻璃窗，被切割成无数斑斓的光尘，安静悬浮在古老教堂的空气里。冷杉、旧书卷与熔蜡的甜香混合在一起。你穿着简单的白色连衣裙，像一朵被风吹进幽暗殿堂的铃兰，好奇地环顾壁画和巨大十字架，然后点燃一支细长白烛，跪在圣坛前第一排长椅边，双手合十闭眼祈祷。年轻神父站在阴影中静静注视着你，那柔顺的跪姿和清澈眼眸让他一向引以为傲的自持力第一次出现裂痕。他深吸一口气，迈着沉稳步伐走出，跪在你身旁，低声与你共诵经文。", prompt: "跪坐或躺好双腿微微分开，脱去内裤。闭眼深呼吸，想象午后斑斓阳光和他低沉祷告声。用指尖轻轻划过手背与大腿外侧，接着用两指在整个穴外侧极轻抚摸，只许表面接触。"},
+            { story: "祷告结束后，他微微侧头，深邃眼眸落在你脸上，轻声说你的心中似乎有许多困惑。他靠得更近，修长指尖看似想整理你额前发丝，却若有若无地轻轻划过你的手背。那短暂触碰如羽毛落下，却带着灼人温度，让你全身瞬间僵住，一股陌生电流迅速蔓延。你第一次如此近距离感受到异性气息与触碰，心跳加速却不讨厌。他没有立刻收回手，而是邀请你去忏悔室。你犹豫片刻，将微凉指尖搭在他温热掌心。他轻轻一握，掌心的持久温度让你既安心又隐秘悸动。", prompt: "保持刚才的姿势，用一只手轻轻覆盖胸口，另一只手两指在阴唇外侧缓慢上下抚摸，每次5秒。快有感觉时立刻停手，默想“他的掌心好烫”。", countdown: 5 },
+            { story: "忏悔室昏暗狭小，木质格栅隔开你们。你跪在跪凳上，声音细弱颤抖，说出最大困惑——关于身体奇怪的感觉、对异性的迷茫，以及那些朦胧情感是否是罪过。你低着头，等待审判。然而他沉默良久后，声音沙哑却温柔，告诉你这些并非不洁，而是灵魂对“圣爱”的最初探索。他走出隔间，站在你面前，高大身影笼罩着跪着的你，将手温柔放在你头顶，然后缓缓下滑，隔着薄薄连衣裙覆盖在你胸前。掌心温度熨烫着你狂跳的心脏，你闭上眼睛，任由那份奇异的酥麻在体内扩散。", prompt: "双手掌心覆盖乳肉缓慢画圈按压，想象他走出隔间覆盖你胸口的温度。然后两指沾润滑在阴唇间浅浅滑动，只许外侧，默念“做这些是被允许的”。", choices: [ { text: "坦白内心的迷茫与躁动", extra: "他眼神微微柔软，指腹隔着单薄的布料轻柔地安抚着你狂跳的心，低声叹息：“不用怕，主会接纳你全部的坦诚，我也是。”" }, { text: "羞涩地推说只是由于天气闷热", extra: "他没有戳穿，只是用指尖轻柔替你拨开颈侧汗湿的碎发，语气带着一丝包容的无奈：“神明能听见灵魂的震颤，不必在我面前伪装。”" } ] },
+            { story: "他低声说，仅仅言语难以让你真正理解圣爱的真谛，需要更直接的方式让你理解。他的手掌带着不容拒绝的温柔轻轻覆在你胸口。你跪在他面前，身体因紧张与莫名期待而微微发颤。他俯身靠近，皂香混着男性体温的气息将你包围。你没有反抗，接受了这份“赐福”。他的指尖轻轻梳理你的长发，划过敏感的后颈，让你轻颤不止。胸前的触碰越来越真实，你感觉自己正被慢慢打开某个尘封角落，羞耻与悸动交织。", prompt: "一只手轻捏乳尖，同时另一只手两指在阴唇外轻压敏感处。快感累积，深呼吸想象神圣语境下的臣服。" },
+            { story: "他牵着你走出忏悔室，穿过空旷主厅，来到烛火明亮的圣坛前。从身后将你紧紧揽入怀中，坚实胸膛贴着你的后背，沉稳心跳透过衣料传来，与你凌乱的心跳渐渐重叠共振。你转过身，踮起脚尖，在他耳边用颤抖的声音说：“神父请帮帮我...”这句话彻底点燃了他。他低下头，轻轻地吻住你的嘴唇，舌尖引导你生涩回应。你的身体彻底软在他怀里，像一叶小舟被欲望风暴卷入。", prompt: "用两指沾着分泌的蜜液轻揉阴蒂，感受心跳加快的频率。快感强烈时挪开指尖，默念“我想成为他唯一的罪人”。"},
+            { story: "他将你横抱而起，轻轻放在冰冷大理石圣坛上。烛火摇曳，圣母像静静注视着你们。他俯身撑在你身体两侧，用深邃眼眸凝视你泛红迷离的脸庞。你感受到圣坛的凉意与他身上滚烫热浪的强烈对比，恐慌与渴望同时涌来。“你疯了吗...这可是圣坛“你有些不知所措的看着他，他低声安抚，拇指温柔摩挲你被咬红的嘴唇，引导你看向圣母像，诉说神的爱是包容一切的。你在魔力般的话语中逐渐放松，任由他将你完全纳入怀抱。", prompt: "双腿分开。左手摩挲嘴唇与锁骨，右手两指浅浅探入穴口，感受冰凉与热浪对比。每次浅探10秒停5秒，一共两次。", choices: [ { text: "顺从地依附着他，分开双腿", extra: "他眼中闪过一丝动容，低头在你微微发颤的额间落下如羽毛般虔诚的一吻：“好孩子，别怕，这并非亵渎，而是救赎。”" }, { text: "羞耻地试图用手遮挡身体", extra: "他并没有强硬地拉开你，而是温柔地将自己的掌心覆在你的手背上，目光如水般包容：“在圣物面前，你的脆弱与美丽同样纯洁，无需遮掩。”" } ] },
+            { story: "他缓缓跪在圣坛前的你身前，像膜拜最珍贵的圣物般，低下头在你膝盖印下轻柔一吻。双手顺着你紧绷的双腿向上抚摸，隔着裙子按压大腿内侧，粗糙指腹带来细密战栗。你颤抖着缓缓分开双腿，羞耻感如潮水涌来，却在神圣语境下无法抗拒。他的手掌完全覆盖住你已微微湿润的底裤，拇指在敏感点缓慢画圈，带来阵阵无法抑制的酥麻。你弓起身体，喉咙溢出细碎喘息。", prompt: "从膝盖开始用指尖向上轻刮大腿内侧。然后手掌完全覆盖阴部，拇指在外侧顺着湿润缝隙抚摸。快感上来立即并腿，默念“我是个好女孩”。" },
+            { story: "他用指尖勾住蕾丝边缘，极其缓慢地拉开最后的薄薄屏障。清凉空气与他温热指腹同时探入你最隐秘之处。你浑身猛颤，发出破碎呜咽。他的食指与中指温柔却坚定，一寸寸探入你从未被触碰过的紧致入口，感受内壁本能的收缩与痉挛。“好女孩，感受这份来自神的共鸣……”他的声音沙哑低沉，在你耳边响起，让你彻底放弃抵抗。", prompt: "两指沾满润滑，缓缓插入第一指节保持不动。轻轻抽动几次后立刻抽出，感受内壁的收缩。" },
+            { story: "他的手指在你体内缓缓探索，拇指持续在阴蒂上轻柔揉按。陌生的饱胀与酥痒如电流窜遍全身，你腰肢无意识挺起迎合，蜜液逐渐湿润他的掌心。圣坛冰冷大理石与体内燃烧热浪形成鲜明对比，你感觉自己正一步步沉沦，却带着奇异的安心。他耐心引导，动作轻柔得近乎怜惜，像在对待一件易碎的珍宝。", prompt: "指节缓慢深入，保持深插10秒感受内壁因为快感的鼓胀。拇指在外侧轻揉阴蒂。快感强烈时停住，等5秒快感减弱后再继续。", countdown: 5 },
+            { story: "他的手指抽动节奏逐渐加快，中指弯曲精准刺激敏感之处。快感如潮水般一波波涌来，你再也抑制不住破碎呻吟从唇间溢出。身体不由自主颤抖，内壁紧紧绞吸着入侵的手指。他俯身含住你的耳垂，低声呢喃鼓励你彻底放开自己，任由本能在神圣空间里绽放。", prompt: "指节带着蜜液抽插，重点刺激敏感点，节奏加快。左手轻捏乳头。每次接近边缘立即停止，默念“现在还不可以高潮”。" },
+            { story: "快感不断累积，你感觉自己快要融化。内壁剧烈收缩，透明蜜液不断涌出。他没有停下，动作更加深入坚定，拇指加快揉按频率。你弓起身体，死死抓住圣坛边缘，指节发白，泪水在眼眶打转，却带着无法言说的极致愉悦。", prompt: "三指继续保持较快节奏抽插，拇指同步加快揉按阴蒂。身体开始颤抖，可以用手抓住枕头，快要到达顶点时加快速度，让所有蜜液喷出，深呼吸控制自己痉挛的身体。"},
+            { story: "他站起身，解开黑色神父长袍，露出早已坚硬滚烫的性器。龟头在你湿滑穴口反复摩擦，沾满你的蜜液。然后腰部一沉，缓慢地将整根粗长肉棒没入你紧窄的穴肉。你哭出声来，撕裂般的疼痛与饱胀感交织在一起。他按住你纤细腰肢，耐心等待你适应。", prompt: "使用两指或玩具，充分润滑后缓慢地整根插入，先保持最深处不动，等到适应后缓慢抽送几次。" },
+            { story: "适应之后，他开始有力抽送，每一次都深深顶到你最敏感的花心，带出淫靡水声。你的祷告早已破碎，只剩下娇吟与哭泣。内壁痉挛般绞紧他粗壮的肉棒，像要将他永远留住。他喘息着加快节奏，将你彻底带入欲望深渊。", prompt: "继续两指（或玩具）有力抽送，每下都尽量顶到最深处。速度由慢到快。每次快感积累到边缘必须立即停止，抽出手指沾着蜜液打圈揉阴蒂，直到穴口再次渴求着发痒，再接着用手指（或玩具）插入抽送" },
+            { story: "他俯下身，嘴唇含住你挺立的粉嫩乳尖，用舌尖卷绕舔弄，随后牙齿轻轻啃咬，带来尖锐却甜蜜的痛感。抽插节奏越来越凶狠猛烈，你的双手本能环上他后背，指甲深深嵌入皮肤，在极致痛快中彻底沉沦。", prompt: "抽插的同时，用另一只手轻轻捏住乳头并轻微扭转。力道可以随着快感累计变得大一些。接近高潮时控制自己1-2秒停住动作再继续，让高潮的感觉被拉长", choices: [ { text: "大声哭喊，释放所有羞耻", extra: "你的眼泪让他眼中泛起心疼的波澜，他俯身将你紧紧抱进怀里，吻去你的泪水，身下的动作放缓，却更加深沉绵长地填满你。" }, { text: "死死咬住嘴唇，强迫自己不出声", extra: "察觉到你的隐忍，他心疼地停下动作，用指腹温柔地摩挲你被咬得泛白的下唇，低声轻哄：“乖，松开牙齿，不要伤害自己，把一切都交给我。”" } ] },
+            { story: "高潮如狂潮猛然袭来。你全身剧烈颤抖，雪白脖颈后仰，蜜穴深处强烈收缩，大股滚烫蜜液喷涌而出。肉棒深深埋入最深处，滚烫浓稠的精液一股股射出，全部灌注进你未经人事的子宫，彻底标记了这具纯洁身体。", prompt: "屈指抽插结合偶尔的阴蒂刺激，身体弓起、脖颈后仰，想象肉棒的深深埋入，大开双腿将你高潮的蜜液尽数喷出，不用在意是否因为高潮露出了失控的表情或是淫荡的喘息。" },
+            { story: "高潮余韵中，他将你紧紧抱在怀里，用温热湿毛巾极其温柔地清理你大腿内侧、红肿私处和乳房上混合的痕迹。每一次轻柔触碰都让你轻颤。你虚弱依偎在他胸前，泪眼朦胧地轻声问：“我是不是再也回不去了？”", prompt: "侧躺或半坐，用干净温热毛巾或清洁湿巾温柔地擦拭大腿内侧、红肿私处和乳房。每处都仔细安抚1-2分钟。感受高潮后虚弱却满足的依恋" },
+            { story: "浴室热水冲洗后，他抱你回到长椅。晨光透过玻璃窗洒落，你们紧紧相拥。你赤裸身体蜷缩在他怀里，头贴着他跳动的心脏，手指轻轻摩挲他后背的抓痕，眼神迷离而痴缠。", prompt: "侧躺抱着枕头，轻轻抚摸自己全身皮肤与私处余韵。感受紧紧相拥的温暖，不用再强烈刺激，沉浸在赤裸依偎的亲密中。" },
+            { story: "他轻轻抚摸你凌乱长发，低头吻去你脸上的泪痕与汗水。你们的身体仍拥抱在一起，圣香混合着浓烈情欲气息。他眼中既有满足占有欲，也有信仰的动摇，却将你抱得更紧，不愿松开。", prompt: "保证自己已经清洁完毕，调整呼吸，为自己擦干泪很并且整理汗湿的发丝" },
+            { story: "晨光完全洒进教堂，照亮你们相拥的身影。你彻底沉沦，心甘情愿成为他唯一的罪人。他吻着你的额头，在心底无声叹息。从你推开教堂大门的那一刻起，这一天的低语已如魔咒般缠绕你们。再也没有回头路。无论是救赎还是沉沦，你们将一同走向未知深渊，在这古老教堂中，开启了你们之间的禁忌故事。", prompt: "找一个舒服的姿势，身体舒展，感受事后余韵带来的颤抖和满足。深呼吸，想象晨光中的教堂和他额头上的吻。默念“你现在彻底是他的了，再也回不去了”" }
+        ];
+        
+        let currentIndex = 0;
+        let isGameStarted = false; 
+        let isStoryTyping = false;
+        let isPromptTyping = false;
+        let isCountingDown = false; 
+        let isGameEnded = false; 
+        let timerInterval;
+        let isChoiceMade = false; 
+
+        const pwdScreen = document.getElementById('password-screen');
+        const pwdInput = document.getElementById('pwd-input');
+        const pwdSubmit = document.getElementById('pwd-submit');
+        const pwdError = document.getElementById('pwd-error');
+
+        const gameContainer = document.getElementById('game-container');
+        const storyContainer = document.getElementById('story-text');
+        const promptBox = document.getElementById('prompt-box');
+        const promptText = document.getElementById('prompt-text');
+        const timerWrapper = document.getElementById('timer-wrapper');
+        const timerDisplay = document.getElementById('countdown-timer');
+        const timerPath = document.getElementById('timer-path');
+        const clickHint = document.getElementById('click-hint');
+        const choiceContainer = document.getElementById('choice-container');
+        
+        const endingScreen = document.getElementById('ending-screen');
+        const restartBtn = document.getElementById('restart-btn');
+
+        function verifyPassword() {
+            if (pwdInput.value === 'maru2311') {
+                pwdError.style.opacity = 0;
+                pwdInput.blur(); 
+                pwdScreen.style.opacity = 0;
+                
+                setTimeout(() => {
+                    pwdScreen.style.display = 'none'; 
+                    isGameStarted = true;
+                    
+                    gameContainer.style.display = 'flex';
+                    clickHint.style.display = 'block';
+                    gameContainer.offsetHeight; 
+                    
+                    gameContainer.style.opacity = 1;
+                    clickHint.style.opacity = 1;
+                    
+                    loadScene();
+                }, 1000); 
+            } else {
+                pwdError.style.opacity = 1;
+                pwdInput.value = ''; 
+                pwdInput.focus(); 
+                
+                setTimeout(() => {
+                    pwdError.style.opacity = 0; 
+                }, 2000);
+            }
+        }
+
+        pwdSubmit.addEventListener('click', (e) => {
+            e.stopPropagation(); 
+            verifyPassword();
+        });
+
+        pwdInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                verifyPassword();
+            }
+        });
+
+        pwdScreen.addEventListener('click', (e) => {
+            e.stopPropagation(); 
+            if (e.target.id !== 'pwd-submit' && e.target.id !== 'pwd-input') {
+                pwdInput.focus();
+            }
+        });
+
+        function typeWriterStory(text, index, speed, callback) {
+            if (!isStoryTyping) return; 
+            
+            if (index < text.length) {
+                if(text.charAt(index) === '\n') {
+                    storyContainer.innerHTML += '<br>';
+                } else {
+                    storyContainer.innerHTML += text.charAt(index);
+                }
+                window.scrollTo(0, document.body.scrollHeight);
+                setTimeout(() => typeWriterStory(text, index + 1, speed, callback), speed);
+            } else {
+                isStoryTyping = false;
+                if (callback) callback();
+            }
+        }
+
+        function typeWriterPrompt(text, index, speed, callback) {
+            if (!isPromptTyping) return; 
+            
+            if (index < text.length) {
+                promptText.innerHTML += text.charAt(index);
+                window.scrollTo(0, document.body.scrollHeight);
+                setTimeout(() => typeWriterPrompt(text, index + 1, speed, callback), speed);
+            } else {
+                isPromptTyping = false;
+                if (callback) callback();
+            }
+        }
+
+        function showChoices(scene) {
+            promptBox.classList.add('visible'); 
+            promptText.innerHTML = ''; 
+            choiceContainer.innerHTML = '';
+            clickHint.style.opacity = 0; 
+            
+            scene.choices.forEach(c => {
+                const btn = document.createElement('div');
+                btn.className = 'choice-btn';
+                btn.innerText = c.text;
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    isChoiceMade = true; 
+                    
+                    storyContainer.innerHTML += `<br><br><span style="color:#A68740; font-style:italic;">${c.extra}</span>`;
+                    
+                    choiceContainer.innerHTML = '';
+                    
+                    isPromptTyping = true;
+                    promptText.innerHTML = ''; 
+                    typeWriterPrompt(scene.prompt, 0, 50, () => {
+                        startTimerIfAny(scene);
+                    });
+                };
+                choiceContainer.appendChild(btn);
+            });
+            setTimeout(() => window.scrollTo(0, document.body.scrollHeight), 50);
+        }
+
+        function startTimerIfAny(scene) {
+            if (scene.countdown) {
+                isCountingDown = true;
+                let timeLeft = scene.countdown;
+                
+                timerWrapper.style.display = 'flex';
+                timerDisplay.innerHTML = timeLeft; 
+                
+                timerPath.style.animation = 'none'; 
+                timerPath.offsetHeight; 
+                timerPath.style.animation = `drainRing ${scene.countdown}s linear forwards`;
+                
+                clickHint.innerHTML = "请按照指示维持状态...";
+                clickHint.classList.remove('blinking');
+                clickHint.style.opacity = 0.3;
+                window.scrollTo(0, document.body.scrollHeight);
+
+                timerInterval = setInterval(() => {
+                    timeLeft--;
+                    if (timeLeft > 0) {
+                        timerDisplay.innerHTML = timeLeft;
+                    } else {
+                        clearInterval(timerInterval);
+                        isCountingDown = false;
+                        timerWrapper.style.display = 'none'; 
+                        
+                        clickHint.innerHTML = "点击屏幕继续";
+                        clickHint.classList.add('blinking');
+                    }
+                }, 1000);
+            } else {
+                timerWrapper.style.display = 'none';
+                
+                if (currentIndex === scriptData.length - 1) {
+                    clickHint.innerHTML = "点击屏幕结束";
+                } else {
+                    clickHint.innerHTML = "点击屏幕继续";
+                }
+                clickHint.classList.add('blinking');
+                clickHint.style.opacity = 1;
+            }
+        }
+
+        function startPromptProcess(scene) {
+            promptBox.classList.add('visible'); 
+            isPromptTyping = true;
+            
+            setTimeout(() => {
+                typeWriterPrompt(scene.prompt, 0, 50, () => {
+                    startTimerIfAny(scene); 
+                });
+            }, 500);
+        }
+
+        function loadScene() {
+            if (currentIndex >= scriptData.length) return;
+            const currentScene = scriptData[currentIndex];
+            
+            storyContainer.innerHTML = '';
+            promptBox.classList.remove('visible'); 
+            promptText.innerHTML = '';
+            choiceContainer.innerHTML = '';
+            timerWrapper.style.display = 'none'; 
+            window.scrollTo(0, 0); 
+            
+            clearInterval(timerInterval);
+            if(timerPath) timerPath.style.animation = 'none'; 
+            
+            isStoryTyping = true;
+            isPromptTyping = false;
+            isCountingDown = false;
+            isChoiceMade = false; 
+
+            typeWriterStory(currentScene.story, 0, 40, () => {
+                if (currentScene.choices) {
+                    showChoices(currentScene);
+                } else {
+                    startPromptProcess(currentScene);
+                }
+            });
+        }
+
+        function triggerEnding() {
+            isGameEnded = true; 
+            
+            gameContainer.style.opacity = 0;
+            clickHint.style.opacity = 0;
+            
+            setTimeout(() => {
+                gameContainer.style.display = 'none'; 
+                
+                endingScreen.style.display = 'flex'; 
+                endingScreen.offsetHeight; 
+                endingScreen.style.opacity = 1; 
+                
+                setTimeout(() => {
+                    restartBtn.style.opacity = 1;
+                }, 1500);
+
+            }, 1500);
+        }
+
+        restartBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); 
+            
+            endingScreen.style.opacity = 0;
+            restartBtn.style.opacity = 0; 
+            
+            setTimeout(() => {
+                endingScreen.style.display = 'none';
+                
+                currentIndex = 0;
+                isGameStarted = false;
+                isGameEnded = false;
+                
+                pwdInput.value = '';
+                pwdScreen.style.display = 'flex';
+                pwdScreen.offsetHeight;
+                pwdScreen.style.opacity = 1;
+                pwdInput.disabled = false;
+                
+            }, 1000); 
+        });
+
+        document.body.addEventListener('click', (e) => {
+            if (!isGameStarted || isGameEnded) return; 
+            
+            if (window.getSelection().toString().length > 0) return;
+            if (isCountingDown) return; 
+
+            if (isStoryTyping) {
+                isStoryTyping = false;
+                storyContainer.innerHTML = scriptData[currentIndex].story.replace(/\n/g, '<br>');
+                
+                if (scriptData[currentIndex].choices && !isChoiceMade) {
+                    showChoices(scriptData[currentIndex]);
+                } else {
+                    startPromptProcess(scriptData[currentIndex]);
+                }
+                setTimeout(() => window.scrollTo(0, document.body.scrollHeight), 50);
+            } else if (isPromptTyping) {
+                isPromptTyping = false;
+                promptText.innerHTML = scriptData[currentIndex].prompt;
+                startTimerIfAny(scriptData[currentIndex]);
+                setTimeout(() => window.scrollTo(0, document.body.scrollHeight), 50);
+            } else {
+                if (scriptData[currentIndex].choices && !isChoiceMade) return;
+
+                if (currentIndex < scriptData.length - 1) {
+                    currentIndex++;
+                    loadScene();
+                } else {
+                    triggerEnding();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
