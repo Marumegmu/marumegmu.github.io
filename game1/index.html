@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文字互动：现代档案 (加密版)</title>
+    <style>     
+        /* 基础页面 */
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f0eee9;
+            background-image: radial-gradient(#dcd8cf 1px, transparent 1px);
+            background-size: 20px 20px;
+            color: #2c2a28; 
+            font-family: "Noto Serif SC", "Songti SC", "STSong", "SimSun", serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            cursor: pointer;
+            user-select: none;
+            overflow: hidden;
+        }
+
+        /* 极简页面外框 */
+        .page-border {
+            position: fixed;
+            top: 20px; bottom: 20px; left: 20px; right: 20px;
+            border: 1px solid rgba(200, 194, 183, 0.4);
+            pointer-events: none; 
+            z-index: 0;
+        }
+
+        /* 全屏边缘系统 UI */
+        .top-screen-ui {
+            position: fixed;
+            top: 35px; 
+            left: 40px;
+            right: 40px;
+            display: flex;
+            justify-content: space-between;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.6rem;
+            color: rgba(156, 151, 144, 0.8);
+            letter-spacing: 3px;
+            pointer-events: none;
+            z-index: 10;
+            white-space: nowrap;
+        }
+        
+        .top-center-mark { font-size: 0.8rem; color: #c97a7e; }
+
+        /* 顶部聚焦垂线 */
+        .top-drop-line {
+            position: fixed;
+            top: 0; left: 50%; transform: translateX(-50%);
+            width: 1px; height: 10vh; 
+            background: linear-gradient(to bottom, rgba(156, 151, 144, 0.4), transparent);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* 现代数字HUD装饰栏 */
+        .modern-hud {
+            position: fixed;
+            top: 75px; left: 50%; transform: translateX(-50%); 
+            width: 88%; max-width: 620px;
+            display: flex; justify-content: space-between; align-items: flex-end;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed rgba(184, 177, 166, 0.5);
+            font-family: 'Courier New', Courier, monospace; 
+            z-index: 10;
+        }
+
+        .hud-recording {
+            display: flex; align-items: center; gap: 8px;
+            font-size: 0.65rem; color: #9c9790; letter-spacing: 1px;
+        }
+        .hud-dot {
+            width: 6px; height: 6px; background-color: #c97a7e; 
+            border-radius: 50%; transition: background-color 0.8s ease;
+        }
+        .anim-blink { animation: hud-blink 1.5s infinite; }
+        .anim-fast-blink { animation: hud-blink 0.3s infinite; background-color: #ff3333; } 
+
+        .hud-env {
+            display: flex; align-items: center; gap: 12px;
+            font-size: 0.65rem; color: #9c9790; letter-spacing: 1px;
+        }
+        .hud-barcode { display: flex; align-items: flex-end; gap: 2px; height: 12px; }
+        .hud-barcode span { width: 2px; background-color: rgba(156, 151, 144, 0.6); }
+        .hud-barcode span:nth-child(1) { height: 6px; }
+        .hud-barcode span:nth-child(2) { height: 10px; }
+        .hud-barcode span:nth-child(3) { height: 4px; }
+        .hud-barcode span:nth-child(4) { height: 12px; }
+        .hud-barcode span:nth-child(5) { height: 8px; }
+
+        /* 开始页样式 (包含密码输入) */
+        #start-screen {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #f0eee9; z-index: 20; transition: opacity 1s ease;
+        }
+        .start-tag { font-family: 'Courier New', monospace; font-size: 0.75rem; color: #c97a7e; letter-spacing: 4px; margin-bottom: 25px; transition: color 0.5s ease; }
+        .start-title { font-family: "Noto Serif SC", serif; font-size: 1.8rem; font-weight: 400; letter-spacing: 12px; margin: 0 0 0 12px; color: #3d3935; }
+        .start-line { width: 40px; height: 1px; background-color: rgba(156, 151, 144, 0.4); margin: 25px 0; }
+        .start-subtitle { font-family: -apple-system, sans-serif; font-size: 0.7rem; letter-spacing: 6px; color: #9c9790; text-transform: uppercase; margin-bottom: 40px; }
+        
+        .pwd-wrapper { position: relative; display: flex; flex-direction: column; align-items: center; }
+        
+        #password-input {
+            padding: 12px 20px; font-family: 'Courier New', monospace; font-size: 0.9rem;
+            background: transparent; border: 1px solid rgba(156, 151, 144, 0.4); color: #3d3935;
+            text-align: center; outline: none; transition: all 0.3s ease; letter-spacing: 4px;
+            width: 220px; border-radius: 2px;
+        }
+        #password-input:focus { border-color: #c97a7e; background-color: rgba(255,255,255,0.3); }
+        #password-input::placeholder { color: rgba(156, 151, 144, 0.4); letter-spacing: 3px; font-size: 0.8rem; }
+        #password-input.error { border-color: #ff3333; color: #ff3333; background-color: rgba(255, 51, 51, 0.05); }
+        
+        #password-error {
+            color: #ff3333; font-family: 'Courier New', monospace; font-size: 0.7rem; margin-top: 12px;
+            letter-spacing: 3px; opacity: 0; transition: opacity 0.3s ease; height: 12px; position: absolute; top: 100%;
+        }
+
+        #start-btn {
+            margin-top: 45px; font-family: 'Courier New', monospace; font-size: 0.7rem; color: #8a837b;
+            border: 1px solid rgba(156, 151, 144, 0.3); padding: 12px 24px; letter-spacing: 3px; cursor: pointer;
+            transition: all 0.4s ease; text-transform: uppercase; border-radius: 2px; background: transparent;
+        }
+        #start-btn:hover { background-color: rgba(201, 122, 126, 0.08); color: #c97a7e; border-color: rgba(201, 122, 126, 0.4); }
+
+        /* 游戏主体大容器 */
+        #game-container {
+            width: 88%; max-width: 620px;
+            display: none; /* 初始隐藏 */
+            flex-direction: column; gap: 15px; 
+            z-index: 2; margin-top: 2vh; position: relative;
+            opacity: 0; transition: opacity 1s ease;
+        }
+
+        #main-content {
+            display: flex; flex-direction: column; gap: 15px;
+            transition: opacity 1s ease;
+        }
+
+        /* 剧情卡片 */
+        #story-card {
+            position: relative;
+            background-color: #ffffff;
+            border: 1px solid #e3dfd8;
+            border-radius: 4px; 
+            padding: 40px 45px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.02); 
+            min-height: 160px;
+            overflow: hidden; 
+        }
+
+        /* 现代UI取景框十字准星 */
+        .crosshair {
+            position: absolute; font-family: monospace;
+            color: rgba(201, 122, 126, 0.6); font-size: 14px;
+            line-height: 1; pointer-events: none; font-weight: bold;
+        }
+        .cross-tl { top: 12px; left: 15px; } .cross-tr { top: 12px; right: 15px; }
+        .cross-bl { bottom: 12px; left: 15px; } .cross-br { bottom: 12px; right: 15px; }
+
+        /* 几何辅助线 */
+        .geometry-deco-circle-1 {
+            position: absolute; top: -40px; right: -30px;
+            width: 140px; height: 140px;
+            border: 1px solid rgba(201, 122, 126, 0.15); border-radius: 50%; pointer-events: none;
+        }
+        .geometry-deco-circle-2 {
+            position: absolute; top: 20px; right: 50px;
+            width: 80px; height: 80px;
+            border: 1px dashed rgba(201, 122, 126, 0.2); border-radius: 50%; pointer-events: none;
+        }
+        .geometry-deco-line {
+            position: absolute; top: 40px; right: -20px;
+            width: 180px; height: 1px; background-color: rgba(201, 122, 126, 0.15);
+            transform: rotate(-35deg); pointer-events: none;
+        }
+
+        /* 剧情文本 */
+        #story-wrapper {
+            position: relative; z-index: 1; 
+            font-size: 0.95rem; line-height: 1.7; letter-spacing: 1px; 
+            text-align: left; 
+        }
+
+        /* 模拟打字机光标 */
+        .typing-cursor {
+            display: inline-block; width: 2px; height: 1.05em;
+            background-color: #c97a7e; vertical-align: text-bottom; margin-left: 2px;
+            animation: type-blink 1s step-end infinite;
+        }
+        .typing-cursor.hidden { display: none; }
+
+        /* 分支选项容器 */
+        #options-container {
+            display: none; 
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 25px;
+            opacity: 0;
+            transition: opacity 0.8s ease;
+            position: relative;
+            z-index: 5;
+        }
+
+        /* 分支选项按钮 */
+        .option-btn {
+            background: rgba(255, 255, 255, 0.5);
+            border: 1px solid rgba(156, 151, 144, 0.4);
+            border-radius: 4px;
+            padding: 12px 18px;
+            font-family: "Noto Serif SC", serif;
+            font-size: 0.9rem;
+            color: #3d3935;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .option-btn:hover {
+            border-color: rgba(201, 122, 126, 0.6);
+            background-color: rgba(201, 122, 126, 0.05);
+            color: #c97a7e;
+        }
+        .option-tag {
+            font-family: 'Courier New', monospace;
+            font-size: 0.7em;
+            color: rgba(201, 122, 126, 0.8);
+            margin-right: 12px;
+            font-weight: bold;
+        }
+
+        /* 引导区域 */
+        #prompt-container {
+            display: flex; flex-direction: column; gap: 6px;
+            padding-left: 15px; margin-top: 5px;
+            border-left: 2px solid rgba(201, 122, 126, 0.4); 
+            opacity: 0; transition: opacity 0.8s ease;
+        }
+        .prompt-label { font-family: -apple-system, sans-serif; font-size: 0.6rem; letter-spacing: 2px; color: #c97a7e; font-weight: 600; }
+        #prompt-text { font-family: -apple-system, sans-serif; font-size: 0.8rem; color: #7a756f; line-height: 1.5; margin: 0; letter-spacing: 0.5px; }
+
+        /* 底部点击提示 */
+        #click-hint {
+            position: fixed; bottom: 25px;
+            font-size: 0.65rem; letter-spacing: 4px; color: #a8a29a;
+            font-family: -apple-system, sans-serif; text-transform: uppercase;
+            animation: pulse-opacity 2.5s infinite ease-in-out; z-index: 2; transition: opacity 0.5s ease;
+            opacity: 0; /* 初始隐藏 */
+        }
+
+        /* 结束页样式 */
+        #end-screen {
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; padding: 60px 0; opacity: 0; transition: opacity 1.5s ease;
+        }
+        .end-tag { font-family: 'Courier New', monospace; font-size: 0.75rem; color: #c97a7e; letter-spacing: 4px; margin-bottom: 25px; }
+        .end-title { font-family: "Noto Serif SC", serif; font-size: 1.4rem; font-weight: 400; letter-spacing: 6px; margin: 0 0 0 6px; color: #3d3935; }
+        .end-line { width: 40px; height: 1px; background-color: rgba(156, 151, 144, 0.4); margin: 25px 0; }
+        .end-subtitle { font-family: -apple-system, sans-serif; font-size: 0.7rem; letter-spacing: 6px; color: #9c9790; text-transform: uppercase; }
+        #restart-btn {
+            margin-top: 60px; font-family: 'Courier New', monospace; font-size: 0.7rem; color: #8a837b;
+            border: 1px solid rgba(156, 151, 144, 0.3); padding: 12px 24px; letter-spacing: 3px; cursor: pointer;
+            transition: all 0.4s ease; text-transform: uppercase; border-radius: 2px; background: transparent;
+        }
+        #restart-btn:hover { background-color: rgba(201, 122, 126, 0.08); color: #c97a7e; border-color: rgba(201, 122, 126, 0.4); }
+
+        /* ================= 移动端终极适配 ================= */
+        @media (max-width: 600px) {
+            .page-border { top: 10px; bottom: 10px; left: 10px; right: 10px; }
+            .top-screen-ui { top: 15px; left: 15px; right: 15px; font-size: 0.55rem; letter-spacing: 0px; }
+            .top-drop-line { height: 4vh; }
+            
+            .modern-hud { top: 35px; width: 92%; padding-bottom: 8px;}
+            .hud-recording, .hud-env { font-size: 0.55rem; letter-spacing: 0px; }
+
+            .start-title { font-size: 1.4rem; letter-spacing: 8px; margin-left: 8px; }
+            #password-input { width: 180px; font-size: 0.8rem; padding: 10px 15px; }
+            #password-error { font-size: 0.6rem; }
+            
+            #game-container { width: 92%; margin-top: 4vh; gap: 12px; }
+            #story-card { padding: 30px 20px; min-height: 120px; }
+            
+            #story-wrapper { font-size: 0.95rem; line-height: 1.65; letter-spacing: 0.8px; }
+            #prompt-text { font-size: 0.82rem; line-height: 1.5; letter-spacing: 0px; }
+            .prompt-label { font-size: 0.65rem; }
+            
+            .option-btn { font-size: 0.9rem; padding: 12px 15px; }
+            .option-tag { font-size: 0.7em; margin-right: 8px; }
+            
+            #click-hint { bottom: 15px; font-size: 0.65rem; }
+            
+            .end-title { font-size: 1.2rem; letter-spacing: 4px; margin-left: 4px; }
+            #end-screen { padding: 40px 0; }
+        }
+
+        /* 动画 */
+        @keyframes hud-blink { 0%, 100% { opacity: 1; box-shadow: 0 0 5px rgba(201, 122, 126, 0.6); } 50% { opacity: 0.3; box-shadow: none; } }
+        @keyframes type-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+        @keyframes pulse-opacity { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.8; } }
+        
+        /* 震动动画 */
+        @keyframes shake { 
+            0%, 100% { transform: translateX(0); } 
+            20%, 60% { transform: translateX(-6px); } 
+            40%, 80% { transform: translateX(6px); } 
+        }
+        .shake-anim { animation: shake 0.4s ease-in-out; }
+    </style>
+</head>
+<body>
+
+    <div class="page-border"></div>
+    
+    <div class="top-screen-ui">
+        <span>[ SYS.ARCHIVE ]</span>
+        <span class="top-center-mark">＋</span>
+        <span id="sys-status-text">REC: 22:45</span>
+    </div>
+
+    <div class="top-drop-line"></div>
+
+    <div class="modern-hud">
+        <div class="hud-recording">
+            <div class="hud-dot" id="hud-indicator" style="background-color: #9c9790;"></div>
+            <span id="hud-status-text">MEMORY_LOG // LOCKED</span>
+        </div>
+        <div class="hud-env">
+            <div class="hud-barcode">
+                <span></span><span></span><span></span><span></span><span></span>
+            </div>
+            <span>28°C / 65% RH</span>
+        </div>
+    </div>
+
+    <div id="start-screen">
+        <div class="start-tag" id="auth-tag">[ SYSTEM // LOCKED ]</div>
+        <h1 class="start-title">课 后 辅 导</h1>
+        <div class="start-line"></div>
+        <p class="start-subtitle">PRIVATE ARCHIVE // SENSORY LOG</p>
+        
+        <div class="pwd-wrapper">
+            <input type="password" id="password-input" placeholder="ENTER PASSKEY" autocomplete="off" />
+            <div id="password-error">ACCESS DENIED</div>
+        </div>
+        
+        <button id="start-btn">INITIALIZE</button>
+    </div>
+
+    <div id="game-container">
+        <div id="main-content">
+            <div id="story-card">
+                <span class="crosshair cross-tl">+</span><span class="crosshair cross-tr">+</span>
+                <span class="crosshair cross-bl">+</span><span class="crosshair cross-br">+</span>
+
+                <div class="geometry-deco-circle-1"></div>
+                <div class="geometry-deco-circle-2"></div>
+                <div class="geometry-deco-line"></div>
+                
+                <div id="story-wrapper">
+                    <span id="story-text"></span><span class="typing-cursor" id="cursor"></span>
+                </div>
+                
+                <div id="options-container"></div>
+            </div>
+            
+            <div id="prompt-container">
+                <span class="prompt-label" id="prompt-label">GUIDE</span>
+                <p id="prompt-text"></p>
+            </div>
+        </div>
+
+        <div id="end-screen">
+            <div class="end-tag" id="end-tag">[ SYSTEM // STANDBY ]</div>
+            <h1 class="end-title" id="end-title">老师，明天也要记得来哦</h1>
+            <div class="end-line"></div>
+            <p class="end-subtitle" id="end-subtitle">SEE YOU TOMORROW</p>
+            <button id="restart-btn">REBOOT_SYSTEM</button>
+        </div>
+    </div>
+
+    <div id="click-hint">点击屏幕继续</div>
+
+    <script>
+        const scriptData = [
+            /* 0 */
+            { 
+                story: "周六下午三点，你准时按响了他家的门铃。午后的阳光慵懒地透过落地窗洒在木地板上。你穿着素雅的白衬衫，及膝的窄裙勾勒出修长的腿部线条，长发盘成知性的发髻。身为他的数学家教，今天这栋宽敞的房子里，只剩下你们两人。门开的瞬间，你敏锐地捕捉到了他眼底闪过的一抹亮色，那视线如同带着温度，轻轻掠过你的身姿。“老师，你来了。”他声音低沉，带着微哑。你走进书房，莫名觉得今天的空气有些稀薄。他在你身旁落座，当你弯腰指着错题时，衬衫顺着重力自然垂落，露出一截白皙柔美的颈际线。你听见他原本平稳的呼吸骤然乱了节奏，灼热的目光让你不由自主地并拢了双腿。你轻咳一声试图掩盖慌乱，声音却染上了一丝连自己都没察觉的娇柔。空气中那种名为“越界”的张力，已悄然蔓延。", 
+                prompt: "闭上双眼，调整呼吸。指尖隔着衣料，从锁骨缓慢向下滑行，在最柔软的边缘停住，微微施压。任由第一丝微弱的战栗在心底蔓延。" 
+            },
+            /* 1 */
+            { 
+                story: "书房内只能听见笔尖沙沙的摩擦声，可他的体温却毫无阻碍地穿透衣料传递过来，扰得你心神微颤。你强迫自己盯着函数图，却无法忽略他始终游移在你领口与裙摆间的视线。你有些局促地想要挪开一点，他却像受到磁场牵引般自然地贴近，大腿侧边隔着薄薄的布料与你紧紧相依。你尽量维持着平稳的语调讲题，胸腔里的心跳却早已如擂鼓。当你再次俯身演算时，胸前起伏的弧线更加鲜明，你清晰地听见了他喉结滚动的吞咽声。“老师……这里我还是不太懂。”他凑到你耳边低语，温热的吐息拂过你的耳廓。你浑身一僵，少年身上干净的皂香与渐渐升腾的荷尔蒙气息将你密不透风地包裹。你不断在心里默念着“我是老师”，身体却已在悄悄软化。", 
+                prompt: "将手缓缓滑至腿间，隔着布料轻压最敏感的所在。用指腹缓慢而有规律地滑动，感受体温逐渐升高。配合着逐渐加快的心跳，让指尖的力度微微加重。" 
+            },
+            /* 2 */
+            { 
+                story: "那份异样感越来越浓烈，你咬着唇，略显慌乱地清了清嗓子试图拉回他的注意力。可当你不经意间再次前倾身体时，衬衫的前襟微微敞开，一抹雪白无暇的肌肤毫无防备地暴露在他的视野里。他原本翻着书页的手猛地顿住，连呼吸都有一瞬间的停滞。你直起身，心跳彻底乱了阵脚。他没有说话，也没有避开视线，而是那样直白、灼热、充满渴望地凝视着你。那眼神如同燃烧的暗火，几乎要将你理智的防线烧穿。你强撑着拿起笔，指尖却控制不住地微微发颤。就在这时，他的膝盖在桌下看似无意地抵上了你的腿侧。", 
+                prompt: "理智与本能在脑海中激烈撕扯。呼吸已经彻底乱了节奏，面对逐步逼近的压迫感，此时此刻，必须做出一个决定。",
+                choices: [
+                    { text: "站起身去倒水，试图逃离这令人窒息的氛围", next: 3 },
+                    { text: "咬紧下唇，装作若无其事继续讲完最后一道题", next: 4 }
+                ]
+            },
+            /* 3 (Branch A - Water) */
+            {
+                story: "你逃也似的站起身，借口口渴快步跑向客厅倒水。冰凉的水流过喉咙，却浇不灭体内悄然升起的燥热。就在你双手撑着流理台平复呼吸时，他不知何时跟了过来，温热的胸膛从背后直接贴上了你的背脊。他的双手撑在台面边缘，将你彻底困在他的怀抱与大理石之间。“老师，你在躲我吗？”他低头，灼热的呼吸尽数喷洒在你的耳廓，声音里带着不加掩饰的侵略性。",
+                prompt: "指尖的力道变得更加清晰、不容抗拒。双手交替揉捏、按压，感受肌肤表面泛起的战栗。在被彻底包围的安全感中，放任身体泛起本能的潮湿。",
+                next: 5
+            },
+            /* 4 (Branch B - Teaching) */
+            {
+                story: "你死死捏着红笔，逼迫自己将视线钉在卷子上，声音微颤地继续讲解最后一道大题。可他根本没有在听，滚烫的目光如同实质般舔舐着你的侧颈。终于，他伸出手，一把抽走了你手中的笔，随手丢在一旁。笔滚落到地毯上，发出沉闷的声响。“老师，别讲题了，看看我。”他强硬地扳过你的肩膀，逼迫你直视他眼中翻涌的欲念。",
+                prompt: "手指向下，直接抚摸那泥泞的深处。略带强硬地拨弄那颗最敏感的核心，感受失控感带来的阵阵酥麻。不要停下，让呼吸变得急促。",
+                next: 5
+            },
+            /* 5 (Merge back - Storm) */
+            { 
+                story: "还没等你开口，傍晚五点半的天色骤暗，一场酝酿已久的暴雨倾盆而下，密集的雨点疯狂敲打着玻璃。客厅暖黄色的灯光下，他彻底褪去了往日乖巧的伪装，眼底翻涌着热切。外面的雷声轰鸣，他定定地看着你，声音在雷雨声中显得格外清晰而蛊惑：“老师，外面雨这么大，今晚别走了，好不好？”你双腿紧紧并拢，心知肚明这场暴雨已将你们彻底困在了一个隐秘的孤岛里。", 
+                prompt: "双手同时动作。一手在敏感地带轻画圈，一手在胸前揉捏。配合愈发急促的呼吸，将指尖的频率慢慢提高，让深处的燥热逐渐沸腾。" 
+            },
+            /* 6 */
+            { 
+                story: "在短暂而令人窒息的沉默后，他半推半就地又将你拉回了书房。这一次，他几乎是毫无顾忌地贴着你坐下，结实的大腿紧紧压着你的腿侧。你努力让视线聚焦在屏幕上，可他翻书时手背“不经意”地重重擦过你的手背，电流般的酥麻感瞬间传遍全身。“老师，你讲得真好，我真的很认真在听……”他压低了嗓音，肩膀几乎要将你圈在怀里。你清晰地感觉到他的呼吸彻底乱了，大腿侧边传来了一阵不容忽视的属于年轻男孩的热度与坚硬。你脸颊瞬间红得像要滴血，下意识想要往旁边躲，他却伸出手，温柔却不容抗拒地挡住了你的退路。", 
+                prompt: "褪去所有的防备，将一根手指极其缓慢地探入。感受内壁被一点点撑开的微胀。停在这里，不要动，细细体会这份令人窒息的张力。" 
+            },
+            /* 7 */
+            { 
+                story: "你强作镇定，却突然感觉到身后传来一阵极具压迫感的热度——他整个人几乎从后面覆了上来，那份灼热而坚硬的存在，隔着衣料毫不避讳地抵在了你的身侧。你不可抑制地剧烈颤抖了一下，桃花般的红晕瞬间蔓延至耳根，可令人羞耻的是，你竟然没有第一时间推开他。那份毫不掩饰的渴望彻底点燃了你心中压抑已久的悸动。你颤着声试图把话说完，嗓音却软得像是在撒娇。见你没有实质性的拒绝，他胆子更大了，身体不仅没有退缩，反而更加用力地向前贴近。“老师，我……我真的忍不住了。”他把脸埋在你的颈侧，声音低哑得可怕。", 
+                prompt: "顺从身体最原始的渴望，加入第二根手指，微微撑开那处柔软。渐渐加快律动的频率，拇指找准最敏感的那一点，不轻不重地按压揉捻，迎接快感的累积。" 
+            },
+            /* 8 (Choice without time limit) */
+            { 
+                story: "理智的弦终于彻底崩断。他张开双臂，从背后结结实实地将你拥入怀中，那双略显粗糙却温热的大掌强势而温柔地覆上了你胸前的柔软。他在你耳畔急促地喘息着，声音带着不顾一切的执拗：“老师……你不知道，我到底忍了多久。”你发出一声难耐的轻喘，身体软绵绵地靠向他的胸膛，此时的你，大脑一片空白。", 
+                prompt: "理智的防线即将溃散。面对越来越强烈的索取感，闭上眼睛，倾听自己剧烈的心跳，顺从内心的本能做出抉择。",
+                choices: [
+                    { text: "象征性地推拒，闭上眼睛任由他施为", next: 9 },
+                    { text: "转过身，抛弃一切理智主动吻上他的唇", next: 10 }
+                ]
+            },
+            /* 9 (Branch A - Passive) */
+            {
+                story: "你的推拒显得如此无力，更像是欲拒还迎的娇嗔：“别这样……我是你老师……”但这微弱的抗议瞬间被他落在你颈侧密密麻麻的碎吻淹没。他的吻滚烫而潮湿，另一只手顺着你大腿的曲线探入了及膝裙底，隔着薄透的内衣精准地找到了那处泥泞，开始放肆地揉按。你的推拒彻底变成了半推半就的迎合，整个人瘫软在他宽阔的胸膛上。“老师，你真的好美……”",
+                prompt: "手上的动作变得更加放肆，用力揉捻胸前挺立的柔软。下身的抽动逐渐提速，在欲拒还迎的羞耻感中，任由一波波浪潮将理智彻底淹没。",
+                next: 11
+            },
+            /* 10 (Branch B - Active) */
+            {
+                story: "理智彻底沦陷。你转过身，双手缠上他的脖颈，踮起脚尖主动迎上了他的唇。这个意料之外的吻让他瞬间陷入狂热，他带着几乎要将你吞噬的迫切加深了这个吻，掠夺着你口腔里每一丝空气。大掌同时毫不留情地揉上你的丰盈，指节因为用力而泛白。探入裙底的手指挑开最后的布料障碍，毫无阻碍地触碰到了那片泛滥的柔软。他急促地喘息着，声音沙哑得几乎咬碎在唇齿间：“这可是老师先主动的，别想反悔。”",
+                prompt: "彻底放开顾忌。三指齐入，狂乱且毫无章法地揉搓。在绝对的放纵中，体会主动撕碎一切禁忌的致命快感。",
+                next: 11
+            },
+            /* 11 (Merge back - Desk penetration) */
+            { 
+                story: "最后的抵抗化作了一滩春水。他喘息着，手臂猛地发力将你整个人抱起，重重地放在了那张散落着模拟卷的书桌上。及膝的窄裙被粗鲁地推至腰间，白皙的双腿无力地垂在桌沿。他站在你双腿之间，眼底翻涌着极具侵略性的暗沉光芒。没有任何前奏，他扶着那处早已胀痛的坚硬，对准了你泛滥的穴口，缓慢却不容拒绝地一寸寸挤入那紧致温暖的深处。被彻底撑开的瞬间，你扬起纤长的脖颈，发出一声高亢的呻吟，眼角逼出了生理性的泪水。两人同时发出一声满足到极致的叹息。他将你彻底贯穿，可怕的充实感让你连灵魂都在战栗。你顺从了本能，双腿颤抖着攀上了他的窄腰，书桌发出令人脸红心跳的吱呀声。“老师，你好紧……”", 
+                prompt: "用手指或器具极尽所能地填满自己。每一次都要重重地抵达到最深处。现在，停在最深处夹紧不要动，平复一下呼吸，然后开始疯狂而猛烈地律动。" 
+            },
+            /* 12 */
+            { 
+                story: "书桌上的疯狂还在继续，他将你翻转过去，让你双手撑在桌面上，以一种绝对臣服的屈辱姿势背对着他。他大掌铁钳般死死掐住你纤细的腰肢，从身后发起了一轮又一轮狂暴而有力的冲刺。每一次毫不留情的深入，都精准地撞击在最脆弱的敏感点上，带来直击灵魂的深沉愉悦。你死死咬住嘴唇，拼命想要把破碎的呻吟压在喉咙里，可身体却像是有自我意识般，迎合着他的撞击向后吞吐。“老师，舒服吗？告诉我？”他贴着你的耳郭，声音带着几分失控的危险，不仅没有减速，反而腾出一只手绕到前面，粗暴地揉捏你随之剧烈晃动的丰盈。快感层层叠叠地堆积，你的身体开始剧烈痉挛。", 
+                prompt: "翻转身体，换成跪趴的姿态。从身后发力，又深又重地进出。另一只手死死按住敏感处，在前后双重的剧烈摩擦下，向着顶峰不断攀爬。" 
+            },
+            /* 13 */
+            { 
+                story: "疯狂的宣泄后是缠绵的深情。他将软成一滩水的你从桌面上捞起，让你面对面地跨坐在他腿上，双腿死死地缠住他的腰身。他仰起头，深邃的眼眸倒映着你此刻意乱情迷的模样，一边温柔地交换着深吻，一边由下至上，缓慢却无比深入地在你身体里研磨。“老师……你真的好美。”他贴着你的唇呢喃。你原本素雅的衬衫早被扯开了大半，精致的锁骨和红痕交错的胸乳随着抽插剧烈起伏。体内积攒的快感如积雨云般轰然炸裂，第一次极致的高潮如岩浆般席卷全身，内壁疯狂收缩绞紧了他。你失控地抱紧他的脖颈，甜腻的叫床声响彻书房。他被绞得倒吸了一口凉气，更加用力地往里顶弄。", 
+                prompt: "找一个靠背坐下，双腿大张。用最深的幅度捣弄，感受内壁剧烈的收缩。张开嘴喘息，迎接由内而外爆发的第一次绝顶快感。" 
+            },
+            /* 14 */
+            { 
+                story: "窗外的雨丝毫没有停歇的意思。草草对付完晚餐后，客厅那张柔软的宽大沙发沦为了你们新的战场。这一次，你彻底抛却了为人师表的羞耻外衣，像个高高在上的女王般跨坐到了他的大腿上。你双手撑着他宽阔的肩膀，腰肢微微抬起，随即将那泥泞不堪的蕊唇对准了昂扬，一点一点毫无保留地将他吞没。“嘶——老师……这样……真舒服。”他深吸了一口气，发出难耐的喘息。你仰起头，发出一声绵长而满足的叹息，随后全凭着本能，开始在沙发上疯狂地上下起伏骑乘。长发凌乱地披散在布满汗水的香肩上，你那妩媚入骨的模样，美得令人心惊。", 
+                prompt: "骑坐在柔软的靠垫上，腰肢用力地上下起伏。双手顺着身体的曲线抚摸腰肢与胸乳，掌控着抽插的节奏与深浅，体会主导一切的极度愉悦。" 
+            },
+            /* 15 (Choice) */
+            { 
+                story: "居高临下的姿势让你尝到了掌控欲的甜头。你的腰肢像水蛇般疯狂扭动，时而浅浅画圈研磨，时而重重坐到底。他眼底的情欲浓稠得几乎化不开，大掌死死掐住你纤细的腰肢不仅不让你逃，反而挺起腰身以极其强悍的反客为主之势狠狠往上顶弄。快感如同海面上层层叠加的巨浪，一波接着一波将你推向失控的边缘。你的脚趾死死蜷缩，身体再次绷成拉满的弓。“夹紧我，我好喜欢你现在的样子……”伴随着他一声压抑到极点的闷哼，你在沙发上迎来了第二次巅峰。宣泄过后，两人的身上都黏糊糊的布满了细汗。", 
+                prompt: "大幅加快起伏的频率，狂乱地按压揉搓。在几近粗暴的摩擦下，强行忍住释放的冲动深呼吸，做出最终的选择，然后彻底释放！",
+                choices: [
+                    { text: "“浑身是汗……抱我去浴室洗澡……”", next: 16 },
+                    { text: "“沙发太窄了，抱我去你房间的大床上……”", next: 18 }
+                ]
+            },
+            /* 16 (Branch A - Bathroom 1) */
+            {
+                story: "浓烈的荷尔蒙还未散去，他便迫不及待将浑身酥软的你打横抱起，一脚踢开浴室的门。滚烫的淋浴水兜头浇下，瞬间将两人浇了个湿透。水雾弥漫中，他将你粗暴地按在冰冷的瓷砖墙上，单手托起你的一条腿。“老师，让我在这里继续干你。”他低哑着嗓音没有废话，挺身一记重重的穿刺直接撞到底。花洒的水流顺着你们紧密连接的部位冲刷而下，带着水温的滑腻触感让交合变得更加顺畅而深刻。破碎的娇吟毫无遮掩地回荡在逼仄的浴室里。",
+                prompt: "站立或半蹲，用手指快速有力地在体内抽插。想象水流冲刷的湿滑与温热，在水声的掩护下感受完全无序的狂野刺激。",
+                next: 17
+            },
+            /* 17 (Branch A - Bathroom 2) */
+            {
+                story: "浴室里的情事渐渐从粗暴转向粘腻缠绵。你无力地趴在湿滑的墙壁上，双手死死撑着瓷砖，他从身后带着令人心惊的执拗与狂热，一次比一次更深地楔入你的身体。“叫出来……再大声点，没人会听见。”他滚烫的唇贴着你耳郭吐出略带强迫的指令。他一手绕到前面疯狂揉弄你的饱满，另一手则精准地找准了那颗早已充血肿胀的敏感点狠命按压。双管齐下的极致刺激让你浑身如同触电般剧烈抽搐，一连串的高潮将你彻底淹没，最后你只能瘫软在他怀里。",
+                prompt: "维持跪趴的姿势，手上的动作决不能停。如同狂风骤雨般不知餍足地抽插，拼命揉搓，体验连续不断的高潮连击。",
+                next: 21
+            },
+            /* 18 (Branch B - Bed 1) */
+            {
+                story: "他将你打横抱起，径直走进了他的卧室，将你扔进柔软宽大的双人床里。他欺身压上，高大的身躯极具压迫感地将你笼罩在身下。他将你的双腿大打大开，以一种极度深入的传教士姿势，缓慢、坚定而又残忍地一顶到底。“看着我……老师。”他死死盯着你的眼睛逼迫你直视这疯狂的一切。你们的视线在昏暗灯光下交缠，他每一次退出又紧接着狠狠捣入最深处，仿佛要将你灵魂撞碎的充盈感让你爽得眼角不断涌出泪水。你伸出双臂死死勒住他汗湿的后背：“我好爽……好喜欢你这么用力……”",
+                prompt: "仰躺在床上，将双腿最大程度地打开。缓慢但极其深重地在体内律动，每一次都要毫无保留地触及最深处。闭上眼，在极度的扩张感中感受灵魂的震颤。",
+                next: 19
+            },
+            /* 19 (Branch B - Bed 2) */
+            {
+                story: "变换姿势，你像一只温顺的猫般蜷缩在床铺上，他从背后严丝合缝地将你圈进怀里。这种侧卧后入的角度诡异地刁钻，每一次抽动都能狠狠刮擦过你体内最脆弱的敏感带。他一只手紧紧箍着你的腰，另一只手极其色情地包裹住你的一侧乳房用力挤压。“老师……你的里面怎么还能这么湿、这么会吸？”他嘶哑的低语伴随着越发狂暴的撞击声。你再也承受不住这种几乎要将人撕裂的快感，死死把脸埋进柔软的枕头里，像缺氧的鱼一般张大嘴巴发出变调的惨叫。",
+                prompt: "采取侧卧的姿势，寻找最能引发战栗的刁钻角度，开始疯狂律动。双手并用，极尽所能地刺激所有敏感带，去追寻下一波汹涌的浪潮。",
+                next: 20
+            },
+            /* 20 (Branch B - Bed 3) */
+            {
+                story: "他似乎并不满足于此，侧卧着将你的一条腿高高抬起，直接架在了他的肩膀上。这个极致的姿势，让你们的结合处彻底暴露在空气中，而进入的角度更是深入到了一个前所未有的可怕境地。“这个姿势……是不是能干得你更爽一点？嗯？”他故意拖长了尾音，随后便是一记毫不留情的没根而入。那种几乎要捅破子宫的极致快感，让你瞬间大脑一片空白。你语无伦次地哭叫着，身体像是通了电般不停打摆子。下半身的动作却带着某种发泄般的不知疲倦，誓要将你榨干最后一丝力气。",
+                prompt: "将上方的一条腿高高抬起，彻底打开身体。用最强悍的力道疯狂抽插，在失控的边缘死死咬住唇，在极致欢愉中失声尖叫。",
+                next: 21
+            },
+            /* 21 (Merge back - Aftermath) */
+            { 
+                story: "凌晨一点，疯狂的情事终于在一声高亢的急喘中画上了休止符。你早已被送上了不知道第几个高潮的巅峰，整个人像一滩抽干了骨头的烂泥，软绵绵地瘫倒在他滚烫的胸膛上，连动一下手指的力气都没有了。窗外的暴雨不知何时已经停歇，房间里安静得只能听见你们交错的、逐渐平缓的呼吸声，以及空气中浓烈得散不开的暧昧气味。他的大掌带着餍足后的温柔，有一下没一下地轻抚过你布满红痕的腰肢和汗湿的脊背。“老师，舒服吗？你还好吗？”他低头吻了吻你的发丝，声音里是藏不住的宠溺。你依偎在他怀里，感受着铺天盖地的余韵。", 
+                prompt: "动作彻底放慢。极其温柔地、充满怜惜地抚摸刚刚被蹂躏过的部位。深深地吸气，平复呼吸，感受高潮余韵在血液中一圈圈荡漾的绝妙酥麻。" 
+            },
+            /* 22 (End - Rewritten) */
+            { 
+                story: "黑暗中，他微微支起上身，目光灼灼地盯着你潮红未褪的脸庞。在这场充斥着汗水与疯狂的沉沦里，那些所谓的界限早已被彻底粉碎。令人心惊的是，你没有感到丝毫逃避的念头，反而不可抑制地生出了食髓知味的贪恋。你抬起酸软的手臂，指尖流连在他汗湿的背脊上，眼波流转间尽是连自己都未曾察觉的渴求。他精准地捕捉到了你眼底的情意，嘴角勾起一抹满足的轻笑。他低下头，鼻尖亲昵地蹭过你的侧脸，随后缓缓凑近你的耳郭。温热的呼吸带着微痒的触感拂过，他用那沙哑却极具蛊惑力的嗓音，在你耳边轻轻落下了一句话——", 
+                prompt: "彻底放松已经虚脱的身体，指尖若有似无地掠过发颤的敏感点。将思绪彻底放空，带着这份极致的战栗与满足，渐渐沉入这场永远醒不过来的梦境。",
+                isEnd: true,
+                endTag: "[ SYSTEM // STANDBY ]",
+                endTitle: "老师，明天也要记得来哦",
+                endSubtitle: "SEE YOU TOMORROW"
+            }
+        ];
+
+        let currentIndex = 0;
+        let isTyping = false;
+        let isEndScreen = false;
+        let isWaitingForChoice = false;
+        let typingTimeout;
+        let isStarted = false;
+        let isAuthenticated = false;
+        
+        const UNIFORM_TYPING_SPEED = 40;
+
+        const mainContent = document.getElementById('main-content');
+        const endScreen = document.getElementById('end-screen');
+        const clickHint = document.getElementById('click-hint');
+        const storyTextElement = document.getElementById('story-text');
+        const cursorElement = document.getElementById('cursor');
+        const promptContainer = document.getElementById('prompt-container');
+        const promptTextElement = document.getElementById('prompt-text');
+        const promptLabel = document.getElementById('prompt-label');
+        const optionsContainer = document.getElementById('options-container');
+        const timerContainer = document.getElementById('timer-bar-container');
+        
+        const hudIndicator = document.getElementById('hud-indicator');
+        const hudStatusText = document.getElementById('hud-status-text');
+        const restartBtn = document.getElementById('restart-btn');
+        
+        const passwordScreen = document.getElementById('password-screen');
+        const passwordInput = document.getElementById('password-input');
+        const passwordError = document.getElementById('password-error');
+        const authBtn = document.getElementById('start-btn'); // 统一使用这个按钮
+        const authTag = document.getElementById('auth-tag');
+
+        const startScreen = document.getElementById('start-screen');
+        const gameContainer = document.getElementById('game-container');
+
+        // 密码验证并直接开始游戏
+        authBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (passwordInput.value === 'maru2036') {
+                passwordError.style.opacity = 0;
+                passwordInput.classList.remove('error');
+                
+                authTag.innerText = '[ SYSTEM // AUTHENTICATED ]';
+                authTag.style.color = '#8a837b';
+                
+                // 将 HUD 切换为激活状态
+                hudIndicator.classList.add('anim-blink');
+                hudIndicator.style.backgroundColor = '#c97a7e';
+                hudStatusText.innerText = 'MEMORY_LOG // ACTIVE';
+
+                startScreen.style.opacity = 0;
+                
+                setTimeout(() => {
+                    startScreen.style.display = 'none';
+                    isAuthenticated = true;
+                    isStarted = true;
+                    
+                    // 显示游戏主体容器并启动剧情
+                    gameContainer.style.display = 'flex';
+                    void gameContainer.offsetWidth; // 触发重绘
+                    gameContainer.style.opacity = 1;
+                    
+                    loadScene();
+                }, 1000);
+            } else {
+                passwordError.style.opacity = 1;
+                passwordInput.classList.add('error');
+                passwordInput.classList.add('shake-anim');
+                passwordInput.value = '';
+                
+                setTimeout(() => {
+                    passwordInput.classList.remove('shake-anim');
+                }, 400);
+            }
+        });
+
+        // 用户重新输入时隐藏错误
+        passwordInput.addEventListener('input', () => {
+            passwordError.style.opacity = 0;
+            passwordInput.classList.remove('error');
+        });
+
+        passwordInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                authBtn.click();
+            }
+        });
+
+        // 阻止点击事件冒泡到 body，防止误触推进剧情
+        startScreen.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+
+        function updateUI() {}
+
+        function typeWriter(text, index, element, speed, callback) {
+            if (index === 0) {
+                element.innerHTML = '';
+            }
+
+            if (index < text.length) {
+                let char = text.charAt(index);
+                element.innerHTML += char;
+                index++;
+                
+                typingTimeout = setTimeout(() => typeWriter(text, index, element, speed, callback), speed);
+            } else {
+                if (callback) callback();
+            }
+        }
+
+        function handleChoice(nextIndex) {
+            optionsContainer.style.opacity = 0;
+            
+            hudIndicator.classList.remove('anim-fast-blink');
+            hudIndicator.classList.add('anim-blink');
+            promptLabel.style.color = '#c97a7e';
+            promptContainer.style.borderLeftColor = 'rgba(201, 122, 126, 0.4)';
+
+            setTimeout(() => {
+                optionsContainer.style.display = 'none';
+                currentIndex = nextIndex;
+                isWaitingForChoice = false;
+                loadScene();
+            }, 500);
+        }
+
+        function displayChoices(scene) {
+            isWaitingForChoice = true;
+            clickHint.style.opacity = 0; 
+
+            if (scene.isWarning) {
+                hudIndicator.classList.remove('anim-blink');
+                hudIndicator.classList.add('anim-fast-blink');
+                promptLabel.style.color = '#ff3333';
+                promptContainer.style.borderLeftColor = 'rgba(255, 51, 51, 0.6)';
+            }
+
+            optionsContainer.innerHTML = '';
+            scene.choices.forEach((choice, idx) => {
+                const btn = document.createElement('div');
+                btn.className = 'option-btn';
+                btn.innerHTML = `<span class="option-tag">[ ACTION // 0${idx+1} ]</span>${choice.text}`;
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    handleChoice(choice.next);
+                };
+                optionsContainer.appendChild(btn);
+            });
+
+            optionsContainer.style.display = 'flex';
+            setTimeout(() => optionsContainer.style.opacity = 1, 50);
+        }
+
+        function loadScene() {
+            if (currentIndex >= scriptData.length) return;
+
+            const currentScene = scriptData[currentIndex];
+            
+            storyTextElement.innerHTML = '';
+            promptTextElement.innerHTML = '';
+            promptContainer.style.opacity = 0;
+            cursorElement.classList.remove('hidden'); 
+            isTyping = true;
+            clickHint.style.opacity = 1; 
+            
+            updateUI();
+
+            typeWriter(currentScene.story, 0, storyTextElement, UNIFORM_TYPING_SPEED, () => {
+                promptContainer.style.opacity = 1;
+                
+                typingTimeout = setTimeout(() => {
+                    typeWriter(currentScene.prompt, 0, promptTextElement, UNIFORM_TYPING_SPEED, () => {
+                        isTyping = false; 
+                        cursorElement.classList.add('hidden'); 
+                        
+                        if (currentScene.choices) {
+                            displayChoices(currentScene);
+                        }
+                    });
+                }, 250);
+            });
+        }
+
+        function showEndScreen(scene) {
+            isEndScreen = true;
+            
+            hudIndicator.classList.remove('anim-blink');
+            hudIndicator.classList.remove('anim-fast-blink');
+            hudIndicator.style.backgroundColor = '#9c9790';
+            hudStatusText.innerText = 'MEMORY_LOG // OFFLINE';
+
+            clickHint.style.opacity = 0;
+            mainContent.style.opacity = 0;
+
+            document.getElementById('end-tag').innerText = scene.endTag;
+            document.getElementById('end-title').innerText = scene.endTitle;
+            document.getElementById('end-subtitle').innerText = scene.endSubtitle;
+
+            setTimeout(() => {
+                mainContent.style.display = 'none';
+                endScreen.style.display = 'flex';
+                setTimeout(() => { endScreen.style.opacity = 1; }, 50);
+            }, 1000); 
+        }
+
+        restartBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); 
+            endScreen.style.opacity = 0;
+
+            setTimeout(() => {
+                endScreen.style.display = 'none';
+                currentIndex = 0;
+                isEndScreen = false;
+                mainContent.style.display = 'flex';
+                
+                hudIndicator.classList.add('anim-blink');
+                hudIndicator.style.backgroundColor = '#c97a7e';
+                hudStatusText.innerText = 'MEMORY_LOG // ACTIVE';
+                promptLabel.style.color = '#c97a7e';
+                promptContainer.style.borderLeftColor = 'rgba(201, 122, 126, 0.4)';
+
+                setTimeout(() => {
+                    mainContent.style.opacity = 1;
+                    loadScene();
+                }, 50);
+            }, 1000);
+        });
+
+        document.body.addEventListener('click', () => {
+            if (!isAuthenticated || !isStarted || isEndScreen || isWaitingForChoice) return; 
+
+            if (isTyping) {
+                clearTimeout(typingTimeout);
+                const currentScene = scriptData[currentIndex];
+                storyTextElement.innerHTML = currentScene.story;
+                promptTextElement.innerHTML = currentScene.prompt;
+                promptContainer.style.opacity = 1;
+                cursorElement.classList.add('hidden'); 
+                isTyping = false;
+
+                if (currentScene.choices) {
+                    displayChoices(currentScene);
+                }
+            } else {
+                const currentScene = scriptData[currentIndex];
+                if (currentScene.isEnd) {
+                    showEndScreen(currentScene);
+                } else {
+                    currentIndex = currentScene.next !== undefined ? currentScene.next : currentIndex + 1;
+                    loadScene();
+                }
+            }
+        });
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                startScreen.style.display = 'flex';
+                setTimeout(() => { startScreen.style.opacity = 1; }, 50);
+            });
+        } else {
+            startScreen.style.display = 'flex';
+            setTimeout(() => { startScreen.style.opacity = 1; }, 50);
+        }
+    </script>
+</body>
+</html>
