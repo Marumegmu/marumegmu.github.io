@@ -8,13 +8,13 @@
         /* ====== 柔和配色方案：烟紫灰与干枯玫瑰 ====== */
         body {
             margin: 0;
-            padding: 8vh 0; 
+            padding: 8vh 0;
             box-sizing: border-box;
             background-color: #1e1b1e;
             background-image: 
-                radial-gradient(circle at 50% 0%, rgba(180, 120, 130, 0.12) 0%, transparent 60%),
-                radial-gradient(circle at 100% 100%, rgba(80, 60, 70, 0.25) 0%, transparent 60%);
-            color: #eae3e0; 
+                radial-gradient(circle 50% 0%, rgba(180, 120, 130, 0.12) 0%, transparent 60%),
+                radial-gradient(circle 100% 100%, rgba(80, 60, 70, 0.25) 0%, transparent 60%);
+            color: #eae3e0;
             font-family: "Noto Serif SC", "Songti SC", "SimSun", serif;
             display: flex;
             flex-direction: column;
@@ -40,7 +40,7 @@
             width: 100vw; height: 100vh;
             pointer-events: none;
             z-index: 9999;
-            opacity: 0.04; 
+            opacity: 0.04;
             background-image: url('data:image/svg+xml;utf8,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noiseFilter"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noiseFilter)"/%3E%3C/svg%3E');
         }
 
@@ -105,7 +105,7 @@
             background-color: #1a1617;
             background-image: radial-gradient(circle at center, rgba(160, 100, 110, 0.08) 0%, transparent 60%);
             transition: opacity 2s cubic-bezier(0.4, 0, 0.2, 1);
-            cursor: default; /* 防止开始页全局误触 */
+            cursor: default;
         }
 
         #start-screen.hide {
@@ -142,7 +142,6 @@
             font-family: 'Courier New', Courier, monospace;
         }
 
-        /* 密码输入框区域 */
         .password-container {
             margin-top: 45px;
             display: flex;
@@ -186,7 +185,7 @@
             margin-top: 12px;
             opacity: 0;
             transition: opacity 0.3s ease;
-            height: 15px; /* 占位防止跳动 */
+            height: 15px;
         }
 
         .error-msg.show {
@@ -242,7 +241,6 @@
             align-items: center; 
             min-height: 50vh;
             
-            /* 初始状态隐藏，等待开始页结束 */
             opacity: 0;
             transform: scale(0.95);
             transition: opacity 2s ease-in-out, transform 2s ease-in-out;
@@ -746,10 +744,10 @@
         ];
 
         let currentIndex = 0;
-        // typingState: -2=开始页, -1=结束页, 0=空闲待点击, 1=正在打字剧情, 2=正在打字提示, 3=等待选择
         let typingState = -2; 
         let typingTimeout;
         let currentAddon = ""; 
+        let currentProcessedStory = ""; 
 
         const storyContainer = document.getElementById('story-text');
         const promptBox = document.getElementById('prompt-box');
@@ -786,12 +784,12 @@
 
             const currentScene = scriptData[currentIndex];
             
-            let processedStory = currentScene.story;
+            currentProcessedStory = currentScene.story;
             if (currentAddon !== "") {
-                processedStory = processedStory.replace("[addon]", currentAddon);
+                currentProcessedStory = currentProcessedStory.replace("[addon]", currentAddon);
                 currentAddon = ""; 
             } else {
-                processedStory = processedStory.replace("[addon]", "");
+                currentProcessedStory = currentProcessedStory.replace("[addon]", "");
             }
             
             storyContainer.innerHTML = '';
@@ -805,7 +803,7 @@
             
             window.scrollTo({ top: 0, behavior: 'auto' });
 
-            typeWriter(storyContainer, processedStory, 0, 35, () => {
+            typeWriter(storyContainer, currentProcessedStory, 0, 35, () => {
                 if (typingState !== 1) return;
                 
                 promptBox.classList.add('show');
@@ -863,64 +861,64 @@
             }, 1500);
         }
 
-        // 开始页按钮与密码验证逻辑
         document.getElementById('start-btn').addEventListener('click', (e) => {
             e.stopPropagation(); 
             const codeInput = document.getElementById('ticket-code');
             const errorMsg = document.getElementById('error-msg');
             
             if (codeInput.value === 'maru1631') {
-                // 密码正确
                 errorMsg.classList.remove('show');
                 document.getElementById('start-screen').classList.add('hide');
                 
-                // 等待开始页淡出后，显示主容器并加载第一幕
                 setTimeout(() => {
                     gameContainer.style.opacity = 1;
                     gameContainer.style.transform = 'scale(1)';
                     loadScene();
                 }, 1500);
             } else {
-                // 密码错误
                 errorMsg.classList.add('show');
-                codeInput.value = ''; // 清空输入框
+                codeInput.value = ''; 
                 codeInput.focus();
             }
         });
 
-        // 支持回车键提交密码
         document.getElementById('ticket-code').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 document.getElementById('start-btn').click();
             }
         });
 
-        // 重新放映按钮逻辑
+        // 重新放映按钮逻辑（修改处：返回开始页）
         document.getElementById('replay-btn').addEventListener('click', (e) => {
             e.stopPropagation(); 
             
+            // 1. 隐藏谢幕页
             endScreen.classList.remove('show');
             
             setTimeout(() => {
+                // 2. 重置游戏数据
                 currentIndex = 0;
                 currentAddon = "";
-                gameContainer.style.opacity = 1;
-                gameContainer.style.transform = 'scale(1)';
-                loadScene();
+                typingState = -2; // 设回等待开始页状态，防止全局点击误触
+                
+                // 3. 清空检票码输入框，增加沉浸感
+                document.getElementById('ticket-code').value = '';
+                
+                // 4. 显示开始页
+                document.getElementById('start-screen').classList.remove('hide');
+                
+                // 此时 gameContainer 已经是透明且缩放的状态，不需要去处理，等玩家再次检票会触发它
             }, 1000);
         });
 
-        // 全局点击推进剧情逻辑
         document.body.addEventListener('click', () => {
-            // 如果在开始页(-2)、谢幕页(-1)或等待选项(3)时，屏蔽全局点击
             if (typingState === -1 || typingState === -2 || typingState === 3) return; 
 
             const currentScene = scriptData[currentIndex];
-            let processedStory = currentScene.story.replace("[addon]", currentAddon);
 
             if (typingState === 1) {
                 clearTimeout(typingTimeout);
-                storyContainer.innerHTML = processedStory;
+                storyContainer.innerHTML = currentProcessedStory;
                 promptBox.classList.add('show');
                 
                 typingState = 2; 
