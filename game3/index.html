@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>文字互动 - 逾矩</title>
+    <style>
+        body {
+            margin: 0;
+            background: radial-gradient(circle at center, #604D53 0%, #1E1719 100%);
+            color: #D5C5C8; /* Pale Slate */
+            font-family: "STSong", "SimSun", "宋体", serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            user-select: none;
+            overflow: hidden;
+        }
+
+        /* 电影暗角与纹理层 */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at 50% 50%, transparent 30%, rgba(0,0,0,0.7) 100%);
+            z-index: 0;
+            pointer-events: none;
+        }
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* 开始与结束屏幕的通用样式 */
+        .fullscreen-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            transition: opacity 1.5s ease;
+            padding: 0 20px;
+            box-sizing: border-box;
+            background: rgba(43, 34, 37, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .fullscreen-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .overlay-title {
+            font-size: 2.2em;
+            color: #DB7F8E; /* Old Rose */
+            letter-spacing: 12px;
+            margin-bottom: 25px;
+            font-weight: normal;
+            text-align: center;
+            animation: breatheGlow 4s infinite alternate;
+        }
+
+        @keyframes breatheGlow {
+            0% { text-shadow: 0 0 10px rgba(219, 127, 142, 0.1); }
+            100% { text-shadow: 0 0 25px rgba(219, 127, 142, 0.6); }
+        }
+
+        .overlay-subtitle {
+            color: #9DA3A4; /* Cool Steel */
+            font-size: 0.95em;
+            letter-spacing: 3px;
+            margin-bottom: 30px;
+            text-align: center;
+            max-width: 600px;
+            line-height: 1.8;
+            position: relative;
+        }
+        
+        .overlay-subtitle::before, .overlay-subtitle::after {
+            content: '✦';
+            position: absolute;
+            font-size: 0.6em;
+            color: #9DA3A4;
+            opacity: 0.5;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        .overlay-subtitle::before { left: -30px; }
+        .overlay-subtitle::after { right: -30px; }
+
+        /* 密码输入区样式 */
+        .password-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 40px;
+        }
+
+        #pass-input {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(157, 163, 164, 0.4);
+            color: #D5C5C8;
+            padding: 12px 20px;
+            font-size: 0.9em;
+            letter-spacing: 4px;
+            text-align: center;
+            outline: none;
+            transition: all 0.4s ease;
+            font-family: inherit;
+            width: 200px;
+            box-sizing: border-box;
+        }
+
+        #pass-input::placeholder {
+            color: rgba(157, 163, 164, 0.5);
+            letter-spacing: 4px;
+        }
+
+        #pass-input:focus {
+            border-color: #DB7F8E;
+            box-shadow: 0 0 15px rgba(219, 127, 142, 0.2);
+            background: rgba(0, 0, 0, 0.4);
+        }
+
+        #error-msg {
+            color: #DB7F8E;
+            font-size: 0.75em;
+            letter-spacing: 2px;
+            margin-top: 10px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            height: 15px;
+        }
+
+        #error-msg.visible {
+            opacity: 1;
+        }
+
+        .end-title {
+            font-family: "Times New Roman", Georgia, serif;
+            letter-spacing: 6px;
+            font-size: 2.8em;
+        }
+
+        .end-quote {
+            font-style: italic;
+            color: #FFDBDA; /* Soft Blush */
+        }
+
+        /* 结束页渐入动画 */
+        #end-screen .overlay-title { opacity: 0; transform: translateY(15px); transition: opacity 1.2s ease, transform 1.2s ease; }
+        #end-screen .overlay-subtitle { opacity: 0; transform: translateY(15px); transition: opacity 1.2s ease, transform 1.2s ease; }
+        #end-screen .action-btn { opacity: 0; transition: opacity 1s ease; }
+
+        #end-screen:not(.hidden) .overlay-title { opacity: 1; transform: translateY(0); transition-delay: 0.4s; }
+        #end-screen:not(.hidden) .overlay-subtitle { opacity: 1; transform: translateY(0); transition-delay: 1.5s; }
+        #end-screen:not(.hidden) .action-btn { opacity: 1; transition-delay: 2.8s; }
+
+        .action-btn {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(157, 163, 164, 0.4);
+            color: #FFDBDA;
+            padding: 15px 45px;
+            cursor: pointer;
+            font-size: 0.95em;
+            letter-spacing: 4px;
+            transition: all 0.5s ease;
+            font-family: inherit;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .action-btn::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(219, 127, 142, 0.15), transparent);
+            transition: all 0.5s ease;
+        }
+
+        .action-btn:hover {
+            border-color: #DB7F8E;
+            color: #FFFFFF;
+            box-shadow: 0 0 15px rgba(219, 127, 142, 0.3);
+        }
+        .action-btn:hover::before { left: 100%; transition: left 1s ease; }
+
+        /* 游戏主容器样式 */
+        #game-container {
+            width: 85%;
+            max-width: 680px;
+            max-height: 85vh; 
+            background-color: rgba(96, 77, 83, 0.4);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+            display: flex;
+            flex-direction: row;
+            position: relative;
+            border: 1px solid rgba(219, 127, 142, 0.15);
+            opacity: 0;
+            transition: opacity 1s ease;
+            pointer-events: none;
+            z-index: 10;
+            overflow-y: auto; 
+            overflow-x: hidden;
+        }
+
+        /* 优雅的自定义滚动条 */
+        #game-container::-webkit-scrollbar {
+            width: 4px;
+        }
+        #game-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        #game-container::-webkit-scrollbar-thumb {
+            background: rgba(219, 127, 142, 0.3);
+            border-radius: 4px;
+        }
+
+        #game-container.visible { opacity: 1; pointer-events: auto; }
+
+        /* 边角复古装饰 */
+        .corner {
+            position: absolute;
+            width: 25px;
+            height: 25px;
+            border: 1px solid rgba(219, 127, 142, 0.4);
+            pointer-events: none;
+            z-index: 5;
+        }
+        .corner-tl { top: 8px; left: 8px; border-right: none; border-bottom: none; }
+        .corner-tr { top: 8px; right: 8px; border-left: none; border-bottom: none; }
+        .corner-bl { bottom: 8px; left: 8px; border-right: none; border-top: none; }
+        .corner-br { bottom: 8px; right: 8px; border-left: none; border-top: none; }
+
+        #deco-sidebar {
+            width: 55px;
+            border-right: 1px solid rgba(157, 163, 164, 0.15);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 0;
+            background: linear-gradient(to bottom, transparent, rgba(219, 127, 142, 0.05), transparent);
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .vertical-text {
+            writing-mode: vertical-rl;
+            font-size: 0.6em;
+            letter-spacing: 8px;
+            color: #9DA3A4;
+            text-shadow: 0 0 5px rgba(0,0,0,0.5);
+        }
+
+        #content-area {
+            flex: 1;
+            padding: 50px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        #story-text {
+            font-size: 0.95em;
+            line-height: 2;
+            text-align: justify;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            white-space: pre-wrap; 
+        }
+
+        .divider {
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(219, 127, 142, 0.3), transparent);
+            margin: 25px 0 15px 0;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .divider::after {
+            content: '◆';
+            color: rgba(219, 127, 142, 0.5);
+            font-size: 0.5em;
+            background: rgba(96, 77, 83, 1);
+            padding: 0 10px;
+            border-radius: 50%;
+        }
+
+        #prompt-box {
+            min-height: 20px;
+        }
+
+        #prompt-text {
+            color: #DB7F8E;
+            font-size: 0.85em;
+            font-style: italic;
+            margin: 0;
+            text-shadow: 0 0 8px rgba(219, 127, 142, 0.25);
+            white-space: pre-wrap;
+        }
+
+        /* 选项按钮容器样式 */
+        #options-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            width: 100%;
+            margin-top: 25px;
+        }
+
+        .choice-btn {
+            display: block;
+            width: 100%;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(157, 163, 164, 0.3);
+            color: #D5C5C8;
+            padding: 12px 20px;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.5s ease;
+            box-sizing: border-box;
+            font-family: inherit;
+            position: relative;
+            overflow: hidden;
+            font-size: 0.9em;
+            letter-spacing: 1px;
+        }
+
+        .choice-btn::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(219, 127, 142, 0.15), transparent);
+            transition: all 0.5s ease;
+        }
+
+        .choice-btn:hover {
+            border-color: #DB7F8E;
+            color: #FFFFFF;
+            padding-left: 30px;
+        }
+        .choice-btn:hover::before { left: 100%; transition: left 0.8s ease; }
+
+        #click-hint {
+            position: fixed;
+            bottom: 25px;
+            font-size: 0.65em;
+            color: #9DA3A4;
+            letter-spacing: 6px;
+            opacity: 0;
+            transition: opacity 1s ease;
+            z-index: 10;
+        }
+
+        #click-hint.visible { animation: textPulse 3s infinite ease-in-out; }
+        @keyframes textPulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.9; } }
+
+        /* =========================================
+           移动端专属适配 (响应式布局)
+           ========================================= */
+        @media screen and (max-width: 768px) {
+            #game-container {
+                width: 92%;
+                max-height: 90vh;
+            }
+            #content-area {
+                padding: 30px 20px;
+            }
+            #deco-sidebar {
+                width: 30px;
+                padding: 20px 0;
+            }
+            .vertical-text {
+                font-size: 0.5em;
+                letter-spacing: 5px;
+            }
+            #story-text {
+                font-size: 0.9em;
+                line-height: 1.8;
+                margin-bottom: 15px;
+            }
+            .overlay-title {
+                font-size: 1.8em;
+            }
+            .overlay-subtitle {
+                font-size: 0.85em;
+                max-width: 90%;
+            }
+            .action-btn {
+                padding: 12px 35px;
+            }
+            #pass-input {
+                width: 180px;
+                padding: 10px 15px;
+            }
+            .corner {
+                width: 15px;
+                height: 15px;
+            }
+            .choice-btn {
+                padding: 10px 15px;
+                font-size: 0.85em;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div id="start-screen" class="fullscreen-overlay">
+    <div class="overlay-title">逾矩</div>
+    <div class="overlay-subtitle">文字互动体验</div>
+    
+    <div class="password-container">
+        <input type="password" id="pass-input" placeholder="输入密钥" autocomplete="off" />
+        <div id="error-msg">密码错误，请重新输入</div>
+    </div>
+
+    <button id="start-btn" class="action-btn">开启沉浸</button>
+</div>
+
+<div id="game-container">
+    <div class="corner corner-tl"></div>
+    <div class="corner corner-tr"></div>
+    <div class="corner corner-bl"></div>
+    <div class="corner corner-br"></div>
+
+    <div id="deco-sidebar"><span class="vertical-text">TWILIGHT</span></div>
+    <div id="content-area">
+        <div id="story-text"></div>
+        <div class="divider" id="content-divider" style="opacity: 0;"></div>
+        <div id="prompt-box"><p id="prompt-text"></p></div>
+        <div id="options-container"></div>
+    </div>
+</div>
+
+<div id="click-hint">—— 点击任意处继续 ——</div>
+
+<div id="end-screen" class="fullscreen-overlay hidden">
+    <div class="overlay-title end-title">THE END</div>
+    <div class="overlay-subtitle end-quote">“世界喧嚣，而你，是他此生唯一想妥善收藏的至宝。”</div>
+    <button id="restart-btn" class="action-btn">重新开始</button>
+</div>
+
+<script>
+    const scriptNodes = {
+        "s1": { story: "【你独自在家，父母出差已有数日。夜色渐深，洗澡后你只披了一件宽松的白色T恤，赤裸的下身贴着柔软床单。你从抽屉里取出那套粉色玩具——小小的跳蛋与一根粗长的仿真假阳具。涂抹上清凉的润滑液后，你先将跳蛋轻轻贴在阴蒂上，调至低频震动。细微的颤动立刻让你身体一软，小穴开始分泌黏腻的淫水。你一边喘息，一边把假阳具对准湿润的穴口，慢慢插进去一点点。脑海中浮现出他的身影——那个你最喜欢的哥哥。你低声呢喃：“哥哥……我好想要你……”】", prompt: "【躺好，慢慢分开双腿，用两根手指轻轻分开阴唇，先用指腹在阴蒂上轻柔画圈。感受细微的颤动让小穴自然分泌黏腻淫水。深呼吸，缓缓将中指和食指并拢对准湿润穴口，浅浅插入一点点。保持缓慢节奏，轻轻抽插，感受身体逐渐发热，阴蒂随着指尖摩擦越来越肿胀敏感。】", next: "s2" },
+        "s2": { story: "【假阳具越插越深，你双腿越张越大，T恤被推到胸口，露出粉嫩的乳尖。跳蛋的震动逐渐加强，你的手快速抽插着假阳具，淫水顺着大腿根流到床单上，发出黏腻的水声。快感层层叠加，你的腰不由自主地弓起，呼吸急促，呻吟声越来越压抑不住。“啊……要高潮了……哥哥……”你闭上眼睛，身体颤抖着逼近高潮边缘，穴肉紧紧收缩缠着假阳具，仿佛下一秒就会喷出来。房间里充满了你甜腻的喘息和玩具震动的声音，完全没有注意到门外走廊的脚步声。】", prompt: "【加深手指的插入，双腿张得更开，T恤推到胸口。用一只手加快抽插速度，另一只手按压阴蒂调强刺激力度。让淫水顺着大腿内侧流下，腰部轻轻弓起配合动作，每一次深入都让快感层层堆积。阴道壁紧紧收缩着手指，持续律动直到身体开始轻颤，停留在高潮边缘。】", next: "s3" },
+        
+        "s3": { 
+            story: "【就在你即将高潮的那一刻，卧室门突然被推开。他提前回家，听见房间里异样的声音，担忧地走进来。眼前的景象让他瞬间怔住：你双腿大开，假阳具还深深埋在湿淋淋的小穴里，跳蛋嗡嗡作响，你的脸颊潮红，眼睛半闭，正处于高潮的临界。他目光中闪过震惊，随即转为深沉的热意。你惊恐地睁大眼睛，轻呼一声想要合拢双腿，却因身体太敏感而无法动弹，高潮被硬生生卡住，让你难受得直咬下唇，淫水还在不受控制地流。】", 
+            prompt: "快感太过强烈，你的身体几乎要失控，此刻你选择：", 
+            options: [
+                { text: "羞耻地闭上眼，伸手想挡住身体", next: "s3_a" },
+                { text: "主动求他帮忙", next: "s3_b" }
+            ] 
+        },
+        "s3_a": { 
+            story: "你惊慌地想合拢双腿，他眼神暗沉，站在门口低声说：“妹妹……你在做什么？这么骚地叫着哥哥的名字自慰？”你羞耻得想哭，却被他的眼神吓得不敢乱动：“别躲，继续用你的手指给我看。让哥哥好好看看你平时是怎么玩自己的。”", 
+            prompt: "继续用两根手指在小穴里浅浅抽插，另一只手按压阴蒂。想象他的注视让下体更加湿润，不许犹豫着放慢节奏。逐渐加快手指抽插速度，让阴蒂被揉得又肿又热，又被推回高潮边缘。", 
+            next: "s4" 
+        },
+        "s3_b": { 
+            story: "他看到你正处于高潮边缘，手指还插在小穴里。你没有合腿，反而带着哭腔轻声叫：“哥哥……我好难受……快要高潮了却卡住了……”他眼神一热，声音低哑：“这么饥渴吗？那哥哥帮你看着，你继续用手指操自己，直到高潮给哥哥看。”", 
+            prompt: "用手指更深地插入小穴，同时另一只手大力揉按阴蒂。感受被观看的羞耻快感，腰肢主动抬起迎合自己的手指。主动说“哥哥……看着我……我要高潮了……”", 
+            next: "s4" 
+        },
+
+        "s4": { story: "【“哥哥……你怎么突然回来了……”你的声音发颤，却被他温柔却坚定地按住。他走近床边：“你这样一个人玩，一定很难受吧？这么骚的小穴，还叫着哥哥的名字。”他的眼神满是关切与占有欲。你羞得耳根发烫，心跳如鼓，下体却因他的注视而更加敏感。假阳具被他缓缓拔出来，带出一大股晶莹的淫水。你想逃，却被他轻轻按住肩膀：“别怕，哥哥来帮你解决，好好听话。”】", prompt: "【手指继续在小穴内抽插，另一只手专注用力揉按阴蒂，力度逐渐加大。感受手指带来的充实感和阴蒂传来的阵阵电流。腰肢不由自主抬起迎合动作，持续刺激，让下体更加湿润敏感，认同他说的：“你这样玩一定很难受吧？有这么敏感的小穴。”】", next: "s5" },
+        "s5": { story: "【他跪在床边，双手分开你还在颤抖的大腿，低下头亲吻你的大腿内侧。他的嘴唇微凉，一路舔吻上去，鼻息喷在你湿透的阴唇上。你羞耻地捂住脸，却止不住从指缝间发出的娇喘。他伸出舌尖，轻轻舔上你肿胀的阴蒂，跳蛋已被他关掉。你全身一震：“哥哥……不要看那里……啊！”他的舌头灵活地绕着阴蒂打转，时而吸吮，时而轻咬，同时两根手指代替假阳具，缓缓插进你湿热紧致的小穴，边舔边说：“看着哥哥，把腿再张开点。”】", prompt: "【加快手指抽插小穴的节奏，同时用指腹快速画圈揉按阴蒂。模拟舔弄般的密集刺激，另一手可轻捏乳头增加快感。腰部扭动感受阴蒂的肿胀跳动，小穴内壁的收缩，逐步将自己推向第一次高潮的临界点。】", next: "s6" },
+        "s6": { story: "【他的手指抽插得越来越快，舌头用力吸吮着你的阴蒂，发出啧啧的水声。你再也忍不住，双手抓着床单，身体不住的颤抖：“哥哥……好舒服……要高潮了……啊！”他没有停下，反而更加用力，舌头深入小穴搅拌，卷走甜腻的淫水。你感觉一股热流从下腹冲出，第一次高潮在哥哥的嘴里爆发。全身剧烈痉挛，阴道紧紧收缩着他的手指，大股淫水喷溅在他脸上。你哭叫着达到顶峰，眼泪都流了出来。他轻拍你的脸：“乖，宝宝做的很棒。”】", prompt: "【加快手指在阴蒂上的揉按和穴内抽插，力度和速度都提到最高。身体弓起。当热流冲出时彻底放松，让全身痉挛，大股淫水喷出。感受阴道紧紧收缩着手指，慢慢平复余韵。】", next: "s7" },
+        "s7": { story: "【高潮后的你还沉浸在余韵中，身体软绵绵的，却感到更深的饥渴。小穴还在一张一合，仿佛在邀请他。你红着脸，主动环住他的脖子，声音带着哭腔：“哥哥……我还想要……想要你的全部……”他抬起头，嘴唇上还沾着你的淫水，轻笑一声脱掉上衣，露出结实的胸膛和早已硬挺粗大的肉棒。你看着那根比玩具大得多的家伙，心跳加速，下体又开始流水。他命令道：“转过去，对着镜子，看看你自己有多浪。”】", prompt: "【高潮后不要停止，用手指温柔抚摸阴蒂和小穴，延长余韵。感受体内更深的空虚，继续缓慢抽插手指，刺激敏感点让身体再次发热。直到下体又开始流水，为更强烈的插入做准备。】", next: "s8" },
+
+        "s8": { 
+            story: "【房间里的落地镜正对着床。他让你跪坐在床上，面对镜子，从身后抱住你。粗大的龟头在你湿滑的穴口磨蹭了几下，沾满你的淫水，然后缓缓顶开紧致的肉壁，一寸寸插进来。你被撑得满满的，发出长长的呻吟：“啊……哥哥好大……插到底了……”他抱紧你，一边缓慢抽插，一边抓住你的下巴强迫你看着镜子里的自己：“看着镜子，看你这骚穴是怎么吞哥哥的肉棒的。”肉棒每一次进出都带出大量淫水，发出噗叽噗叽的声音。他的手揉捏着你的乳肉，拇指拨弄乳头。】", 
+            prompt: "面对如此羞耻的要求，你选择：", 
+            options: [
+                { text: "咬着唇摇头：“哥哥……不要……”", next: "s8_a" },
+                { text: "变得更加兴奋，晃着屁股要更多：“哥哥……我喜欢这样……”", next: "s8_b" }
+            ] 
+        },
+        "s8_a": { 
+            story: "他把你拉到床边面对落地镜，让你跪坐着，从身后环住你，低声在耳边说：“看着镜子里的自己，让哥哥看看你被操到喷水时有多淫荡。”你被迫抬头正对镜子，羞耻得想闭眼，却被他轻轻捏住下巴：“不许闭眼，看着自己是怎么浪的。”", 
+            prompt: "手指深深插入小穴，另一只手用力揉按阴蒂，想象对着镜子自己红着脸、双腿大开、手指进出湿润小穴的淫靡画面，逐渐加快速度顶弄敏感点，让淫水顺着手指流下，把大腿和床单弄得湿透。盯着镜子里的自己浪叫", 
+            next: "s9" 
+        },
+        "s8_b": { 
+            story: "他让你面对镜子跪坐，从身后抱住你，声音温柔却带着命令：“看着镜子里的自己，告诉哥哥，你现在有多想要。”", 
+            prompt: "用手指缓缓插入自己，另一只手轻柔却精准地揉按阴蒂。看着镜中自己逐渐迷离的表情和湿润的下体，慢慢加快抽插速度。一手揉捏乳头，感受饱胀与快感同时袭来。", 
+            next: "s9" 
+        },
+
+        "s9": { story: "【抽插逐渐加快，他托着你的膝窝抱起抽插，更深更狠地顶撞着子宫口。每一次撞击都让你尖叫，床摇晃得厉害。“小穴好紧……吸得哥哥好爽……说出来，你是不是一直想着被哥哥操？”他在你耳边低语，声音带着轻微的羞辱。你羞耻又兴奋，双手环住他的脖子，任由他操弄自己，被迫盯着镜子里自己被操得浪叫的脸。快感一波接一波，你感觉又要高潮了，但这次更深更强烈。小穴剧烈收缩，紧紧裹着他的肉棒。】", prompt: "【把双腿分开，努力抽插，同时用掌心蹭阴蒂。盯着镜子里的自己，动作越来越激烈。感受快感层层堆叠，小穴剧烈收缩，羞耻与快感交织，将自己推向第二次高潮边缘。想象哥哥低语：“看着镜子，看你这骚穴是怎么吞手指的。”】", next: "s10" },
+        "s10": { story: "【他突然加速，肉棒像打桩机一样撞击着最敏感的地方，同时手指拨弄你的阴蒂。你彻底崩溃，浪叫声回荡在房间：“哥哥……要喷了……啊——！”一股前所未有的热流从体内冲出，你在极致高潮中潮吹了。大股透明的淫水像喷泉一样喷出来，浇湿了他的小腹、镜子和床单。你全身抽搐，眼睛翻白，哭喊着达到最强烈的巅峰。他在镜子里看着你：“看，你喷得床单都湿透了，宝宝。”】", prompt: "【加快速度抽插和阴蒂刺激，模拟撞击节奏。当快感爆发时彻底释放。让大股淫水涌出，感受彻底解放。】", next: "s11" },
+        "s11": { story: "【他没有停下，继续操着还在喷水的你，把潮吹的快感延长。你感觉自己快要被操坏了，却又无比满足。他坏心思的加快速度，肉棒在你痉挛的小穴里进出得更加凶猛。你的淫水混合着他的汗水，把结合处弄得一片狼藉。“哥哥……太深了……要坏掉了……不要让我一直看镜子……”你哭着求饶，却又主动抬起腰迎合他的撞击。他轻笑：“就是要让你看着自己被哥哥操到喷水的样子，好好记住。”】", prompt: "【高潮中继续缓慢抽插手指，延长喷水余韵。手指轻柔抚摸还在收缩的小穴和阴蒂，感受持续快感。身体微微颤抖，保持高度敏感状态，准备下一轮刺激。】", next: "s12" },
+        "s12": { story: "【他把你翻过来，从后面抱住你，后入式深深插入。他的手从前面揉着你的阴蒂，另一只手捏着乳肉。啪啪的撞击声不绝于耳，你跪趴在床上，屁股高高翘起，任他操弄。他拉着你的头发让你抬头看镜子：“抬起头，看着自己被操得像小母狗一样。”第二次潮吹的前兆又来了，你的身体颤抖：“哥哥……又要喷了……！”他用力顶了几下，你再次喷出大量淫水，湿透了他的大腿。】", prompt: "【转为跪趴姿势，从后用力抽插手指，一手持续揉阴蒂，猛烈撞击般动作，感受后入式的深度。想象哥哥命令：“抬起头，看着自己被操得像小母狗一样。”】", next: "s13" },
+        "s13": { story: "【他把你抱起来，让你坐在他身上面对面，肉棒从下往上猛顶，同时转了个角度让你正对镜子。你随着他的动作上下被顶起。汗水顺着身体流下，房间里满是淫靡的气味和水声。你已经高潮了好几次，声音都喊哑了，却还是贪婪地要着他。“哥哥……射给我……里面……我好想要……”你迷乱地恳求，在他的调教下说出羞耻的话。他吻住你的唇，加快速度顶着最深处，一边让你继续看着镜子里的淫荡模样。】", prompt: "【坐在手指上快速上下套弄，同时正对镜子。一手揉捏乳尖加速动作。感受最深处的撞击冲向又一次高潮。承认他说的：“自己一直想着被哥哥操”】", next: "s14" },
+        "s14": { story: "【终于，在你又一次剧烈收缩中，他深深顶进子宫口，滚烫的精液喷射出来。你被烫得又喷了一次水，两人同时达到高潮。你瘫软在他怀里，全身都是汗水和淫液，小穴还在轻轻抽搐，混合着他的精液慢慢流出。他轻轻抚摸你的头发：“宝宝，表现得很好。”】", prompt: "【在强烈收缩小穴时最深插入，用力按压阴蒂。彻底释放，再次潮吹喷水。全身瘫软，感受混合淫液从小穴缓缓流出。】", next: "s15" },
+        "s15": { story: "【激情平息后，他温柔地将你揽入怀中，大手轻抚你的后背和头发，吻着你汗湿的额头，低声安抚：“乖，没事了，哥哥在这里。刚才羞耻吗？但你很乖。”你无力地依偎着他，他用温暖的掌心仔细擦拭你腿间的狼藉，动作轻柔，避免刺激你敏感的阴蒂和小穴。你泪眼朦胧没有动的力气。】", prompt: "【高潮后温柔抚摸全身和大腿内侧，用干净毛巾或手轻擦腿间狼藉。动作轻柔，避免直接刺激阴蒂和小穴，只为清洁和安抚。深呼吸，感受身体的放松与满足，想象他揽你入怀轻声安抚。】", next: "s16" },
+
+        "s16": { 
+            story: "【他小心抱起你走进浴室，放满温热的水，一同进入浴缸。从身后环住你，用沐浴露温柔清洗身体。手指拂过红肿的小穴和阴蒂时格外轻柔，只为清洁。】", 
+            prompt: "在这份极致的安全感中，你选择：", 
+            options: [
+                { text: "把脸埋进他滚烫的胸膛，下意识的依赖他", next: "s16_a" },
+                { text: "抬起头，红着脸问：“那哥哥会一直爱我吗？”", next: "s16_b" }
+            ] 
+        },
+        "s16_a": { 
+            story: "你全身无力，直接把脸埋进他滚烫的胸膛依赖着他，鼻尖贴着他结实的胸肌，感受他稳健有力的心跳和温暖的体温。他一只手轻轻环住你的后背，另一只手温柔地抚摸你的头发，轻声哄道：“乖，好好靠着哥哥，放松。”你像小猫一样蜷缩在他怀里", 
+            prompt: "手指动作非常轻柔，只做安抚式的触摸，不再用力刺激，只是感受余韵中轻微的跳动和湿润。深呼吸，让手指慢慢滑过大腿内侧，帮自己彻底放松", 
+            next: "s17" 
+        },
+        "s16_b": { 
+            story: "你抬起头，红着脸看着他的眼睛问：“那哥哥会一直爱我吗？”他低头吻了吻你的额头，眼神温柔而坚定：“当然会，一直爱你，只爱你。”他的大手轻轻托着你的后背，把你更紧地搂进怀里。", 
+            prompt: "用更轻柔的动作按摩大腿内侧和阴唇。手指只是轻轻滑动和安抚，不再深入抽插，慢慢平复所有余韵，让身心在温柔的触碰与他的承诺中彻底放松", 
+            next: "s17" 
+        },
+
+        "s17": { story: "【清理完毕后，你已经累的睡着，他抱你回到床上后也始终没有松开你，偶尔低头亲吻你的发顶，确保你睡得安稳。激情化作温柔的余韵，你知道，从今晚开始，他不再只是哥哥，而是那个能同时彻底满足你、调教你、照顾你的人。】", prompt: "【躺在床上，轻轻按摩腿部、腰部和肩膀。缓慢深呼吸，让全身肌肉彻底放松，感受释放欲望后的舒适】", next: "end" },
+    };
+
+    let currentId = null;
+    let typingTimeout = null;
+    
+    // 0 = 空闲/已完成; 1 = 正在打字剧情; 2 = 正在打字引导
+    let typingState = 0; 
+    let storyIndex = 0;
+    let promptIndex = 0;
+
+    const storyEl = document.getElementById('story-text');
+    const promptEl = document.getElementById('prompt-text');
+    const optionsEl = document.getElementById('options-container');
+    const dividerEl = document.getElementById('content-divider');
+    const startScreen = document.getElementById('start-screen');
+    const endScreen = document.getElementById('end-screen');
+    const gameContainer = document.getElementById('game-container');
+    const clickHint = document.getElementById('click-hint');
+    const passInput = document.getElementById('pass-input');
+    const errorMsg = document.getElementById('error-msg');
+
+    // 验证密码并开始
+    function checkPasswordAndStart() {
+        if (passInput.value === "maru2354") {
+            errorMsg.classList.remove('visible');
+            startScreen.classList.add('hidden');
+            passInput.blur(); 
+            
+            setTimeout(() => {
+                gameContainer.classList.add('visible');
+                loadScene("s1");
+            }, 800);
+        } else {
+            errorMsg.classList.add('visible');
+            passInput.select();
+        }
+    }
+
+    document.getElementById('start-btn').addEventListener('click', checkPasswordAndStart);
+    passInput.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') checkPasswordAndStart();
+    });
+    passInput.addEventListener('input', () => {
+        errorMsg.classList.remove('visible');
+    });
+
+    document.getElementById('restart-btn').addEventListener('click', () => {
+        endScreen.classList.add('hidden');
+        passInput.value = ''; 
+        setTimeout(() => {
+            startScreen.classList.remove('hidden');
+        }, 1000); 
+    });
+
+    // 显示选项或继续提示
+    function showOptionsOrHint(scene) {
+        optionsEl.innerHTML = ''; 
+        if (scene.options) {
+            scene.options.forEach(opt => {
+                let btn = document.createElement('button');
+                btn.className = 'choice-btn';
+                btn.innerText = opt.text;
+                btn.onclick = (e) => {
+                    e.stopPropagation(); 
+                    loadScene(opt.next);
+                };
+                optionsEl.appendChild(btn);
+            });
+        } else {
+            if (scene.next) {
+                clickHint.classList.add('visible');
+            }
+        }
+        setTimeout(() => { gameContainer.scrollTop = gameContainer.scrollHeight; }, 50);
+    }
+
+    // 切换到引导文字打字阶段
+    function transitionToPrompt(immediate = false) {
+        typingState = 2;
+        dividerEl.style.opacity = '1';
+        dividerEl.style.transition = 'opacity 0.8s ease';
+        
+        if (immediate) {
+            typePrompt();
+        } else {
+            // 给个短暂的停顿，然后再开始打字引导文字
+            typingTimeout = setTimeout(typePrompt, 300);
+        }
+    }
+
+    // 打字机：剧情
+    function typeStory() {
+        if (typingState !== 1) return; // 状态已被跳过或中断
+        const scene = scriptNodes[currentId];
+        
+        if(storyIndex < scene.story.length) {
+            storyEl.innerHTML += scene.story.charAt(storyIndex++);
+            if(gameContainer.scrollHeight > gameContainer.clientHeight) {
+                 gameContainer.scrollTop = gameContainer.scrollHeight;
+            }
+            typingTimeout = setTimeout(typeStory, 40);
+        } else {
+            transitionToPrompt(false);
+        }
+    }
+
+    // 打字机：引导
+    function typePrompt() {
+        if (typingState !== 2) return; // 状态已被跳过或中断
+        const scene = scriptNodes[currentId];
+        
+        if(promptIndex < scene.prompt.length) {
+            promptEl.innerHTML += scene.prompt.charAt(promptIndex++);
+            if(gameContainer.scrollHeight > gameContainer.clientHeight) {
+                 gameContainer.scrollTop = gameContainer.scrollHeight;
+            }
+            typingTimeout = setTimeout(typePrompt, 30);
+        } else {
+            typingState = 0; // 彻底打字完成
+            showOptionsOrHint(scene);
+        }
+    }
+
+    // 加载剧情场景
+    function loadScene(id) {
+        if (id === "end") {
+            gameContainer.classList.remove('visible');
+            clickHint.classList.remove('visible');
+            setTimeout(() => {
+                endScreen.classList.remove('hidden');
+            }, 800);
+            currentId = null;
+            return;
+        }
+
+        currentId = id;
+        
+        // 重置文字和容器
+        storyEl.innerHTML = ''; 
+        promptEl.innerHTML = '';
+        optionsEl.innerHTML = '';
+        dividerEl.style.opacity = '0';
+        clickHint.classList.remove('visible');
+        gameContainer.scrollTop = 0;
+        
+        if (typingTimeout) clearTimeout(typingTimeout);
+        
+        // 初始化状态进入“剧情打字”阶段
+        typingState = 1; 
+        storyIndex = 0;
+        promptIndex = 0;
+        
+        typeStory();
+    }
+
+    // 全局点击逻辑控制
+    document.body.addEventListener('click', (e) => {
+        if (e.target.tagName.toLowerCase() === 'button' || e.target.id === 'pass-input') return;
+        if (!gameContainer.classList.contains('visible')) return;
+        
+        const scene = scriptNodes[currentId];
+        
+        // 第一阶段：正在打字剧情 -> 补全剧情，立刻进入打字引导
+        if (typingState === 1) {
+            clearTimeout(typingTimeout);
+            storyEl.innerHTML = scene.story;
+            if(gameContainer.scrollHeight > gameContainer.clientHeight) {
+                 gameContainer.scrollTop = gameContainer.scrollHeight;
+            }
+            // 立即切换到引导阶段并开始打字
+            transitionToPrompt(true);
+            return;
+        }
+        
+        // 第二阶段：正在打字引导 (或者是刚补全剧情等待的 300ms 间隙) -> 补全引导，显示选项
+        if (typingState === 2) {
+            clearTimeout(typingTimeout);
+            promptEl.innerHTML = scene.prompt;
+            typingState = 0; // 完成所有动画
+            showOptionsOrHint(scene);
+            return;
+        }
+
+        // 阶段三：动画全播完了 -> 进入下一幕 (前提是没有选项阻拦)
+        if (typingState === 0 && currentId && scene.next && !scene.options) {
+            loadScene(scene.next);
+        }
+    });
+</script>
+</body>
+</html>
