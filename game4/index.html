@@ -2,7 +2,6 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<!-- 增加 WebApp 全屏沉浸式 Meta 标签 -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -19,23 +18,29 @@
         }
 
         /* 动态呼吸流光背景 & 移动端锁死视口防回弹 */
-        html, body {
+        html {
+            background-color: #000; /* 兜底纯黑背景，防止部分浏览器透明化 */
+            width: 100%; height: 100%;
+        }
+        
+        body {
             margin: 0; padding: 0;
             width: 100%; height: 100%;
             position: fixed; /* 彻底解决手机端 100vh 被地址栏遮挡的问题 */
             top: 0; left: 0;
+            
+            /* 恢复原版流光背景 */
+            background-color: #000;
+            background-image: linear-gradient(120deg, #090204 0%, #17050e 25%, #05060d 50%, #120206 75%, #050207 100%);
+            background-size: 400% 400%;
+            animation: liveShadows 25s ease infinite alternate;
+            
+            color: var(--text-story); font-family: var(--font-serif);
             overflow: hidden; /* 防止橡皮筋拉伸回弹 */
             overscroll-behavior: none; 
             touch-action: none; /* 禁用全局默认手势，内部滚动区单独开放 */
             -webkit-touch-callout: none; /* 禁用长按菜单 */
             user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
-        }
-
-        body {
-            background: linear-gradient(120deg, #090204 0%, #17050e 25%, #05060d 50%, #120206 75%, #050207 100%);
-            background-size: 400% 400%;
-            animation: liveShadows 25s ease infinite alternate;
-            color: var(--text-story); font-family: var(--font-serif);
         }
         
         @keyframes liveShadows {
@@ -285,17 +290,14 @@
 </head>
 <body>
 
-    <!-- 背景特效群 -->
     <div class="bg-mandala"></div>
     <div class="particles"></div>
     
-    <!-- 全局复古外框 -->
     <div class="global-frame">
         <div class="g-node gn-tl"></div><div class="g-node gn-tr"></div>
         <div class="g-node gn-bl"></div><div class="g-node gn-br"></div>
     </div>
 
-    <!-- 开始页（包含密码系统） -->
     <div id="start-screen" class="screen active">
         <div class="title-container">
             <div class="title-cn">永恒的执念</div>
@@ -308,16 +310,13 @@
         </div>
     </div>
 
-    <!-- 游戏本体 -->
     <div id="game-screen" class="screen">
         <div id="game-container">
             
             <div id="story-frame">
-                <!-- 哥特边角装饰 -->
                 <div class="sf-corner sfc-tl"></div><div class="sf-corner sfc-tr"></div>
                 <div class="sf-corner sfc-bl"></div><div class="sf-corner sfc-br"></div>
                 
-                <!-- 上下仪式感线条 -->
                 <div class="frame-ornament fo-top"><div class="fo-star">✦</div></div>
                 
                 <div id="story-scroll-area">
@@ -337,7 +336,6 @@
         </div>
     </div>
 
-    <!-- 结局界面 -->
     <div id="ending-screen" class="screen">
         <div class="end-content">
             <div class="end-cn" id="end-cn">我们要永远在一起</div>
