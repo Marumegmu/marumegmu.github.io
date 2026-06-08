@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>永恒的执念</title>
+    <style>
+        /* ================= 核心流光色彩体系 ================= */
+        :root {
+            --text-story: #e8e0e3; 
+            --text-prompt: #f0a8b9; 
+            --text-muted: rgba(200, 180, 190, 0.5);
+            --accent-blood: #c41230;
+            --accent-purple: #5c1b54;
+            --font-serif: "Noto Serif SC", "Songti SC", "SimSun", "STKaiti", serif;
+        }
+
+        /* 动态呼吸流光背景 */
+        body {
+            margin: 0; padding: 0;
+            background: linear-gradient(120deg, #090204 0%, #17050e 25%, #05060d 50%, #120206 75%, #050207 100%);
+            background-size: 400% 400%;
+            animation: livingShadows 25s ease infinite alternate;
+            color: var(--text-story); font-family: var(--font-serif);
+            height: 100vh; width: 100vw; overflow: hidden;
+            user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
+        }
+        @keyframes livingShadows {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* ================= 全局环境装饰（粒子与暗角） ================= */
+        .bg-mandala {
+            position: absolute; width: 200vw; height: 200vw;
+            max-width: 1200px; max-height: 1200px; border-radius: 50%;
+            background: repeating-radial-gradient(circle, transparent, transparent 40px, rgba(196, 18, 48, 0.03) 41px, transparent 42px);
+            top: 50%; left: 50%; transform: translate(-50%, -50%);
+            animation: rotateMandala 120s linear infinite; z-index: 0; pointer-events: none;
+        }
+        @keyframes rotateMandala { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
+
+        /* 悬浮粒子特效 */
+        .particles {
+            position: absolute; inset: 0; pointer-events: none; z-index: 1;
+            background-image: radial-gradient(circle, rgba(196,18,48,0.2) 1px, transparent 1px),
+                              radial-gradient(circle, rgba(240,168,185,0.1) 2px, transparent 2px);
+            background-size: 80px 80px, 150px 150px;
+            animation: particleDrift 80s linear infinite;
+        }
+        @keyframes particleDrift { 100% { background-position: 400px -400px, -300px -500px; } }
+
+        /* 屏幕四周暗角 */
+        .vignette {
+            position: absolute; inset: 0; pointer-events: none; z-index: 50;
+            background: radial-gradient(circle at center, transparent 40%, rgba(0,0,0,0.85) 100%);
+        }
+
+        /* 哥特式全局外框 */
+        .global-frame {
+            position: fixed; inset: clamp(10px, 2.5vw, 15px);
+            border: 1px solid rgba(196, 18, 48, 0.1); pointer-events: none; z-index: 100;
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.8), 0 0 20px rgba(0,0,0,0.9);
+        }
+        .global-frame::before, .global-frame::after {
+            content: ''; position: absolute; inset: 4px;
+            border: 1px dashed rgba(240, 168, 185, 0.08);
+        }
+        /* 角落流光节点 */
+        .g-node { position: absolute; width: 6px; height: 6px; background: #000; border: 1px solid var(--accent-blood); box-shadow: 0 0 10px var(--accent-blood); border-radius: 50%; }
+        .gn-tl { top: -3px; left: -3px; } .gn-tr { top: -3px; right: -3px; }
+        .gn-bl { bottom: -3px; left: -3px; } .gn-br { bottom: -3px; right: -3px; }
+
+        /* ================= 屏幕切换 ================= */
+        .screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            opacity: 0; visibility: hidden; transition: opacity 1.5s cubic-bezier(0.4, 0, 0.2, 1), visibility 1.5s; z-index: 10;
+        }
+        .screen.active { opacity: 1; visibility: visible; z-index: 20; }
+
+        /* ================= 开始页 ================= */
+        #start-screen { cursor: pointer; background: radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.9) 100%); }
+        .title-container { z-index: 2; text-align: center; pointer-events: none; position: relative; }
+        .title-cn {
+            font-size: clamp(2.8rem, 12vw, 4.5rem); letter-spacing: 18px; text-indent: 18px;
+            font-weight: 300; margin-bottom: 40px; color: #fff;
+            text-shadow: 0 0 15px rgba(196,18,48,0.8), 2px 2px 25px var(--accent-purple), 0 0 40px rgba(255,255,255,0.3);
+            animation: ghostlyTitle 4s ease-in-out infinite alternate;
+        }
+        @keyframes ghostlyTitle { 0% { transform: scale(0.98); filter: brightness(0.8) blur(0.5px); } 100% { transform: scale(1.02); filter: brightness(1.2) blur(0); } }
+        .start-hint { 
+            font-size: 0.95rem; color: var(--text-prompt); letter-spacing: 10px; animation: breath 2.5s infinite ease-in-out; 
+            border-top: 1px solid rgba(196, 18, 48, 0.5); border-bottom: 1px solid rgba(196, 18, 48, 0.5); padding: 10px 0; 
+            position: relative; display: inline-block;
+        }
+        .start-hint::before, .start-hint::after { content: '✧'; position: absolute; top: 50%; transform: translateY(-50%); color: var(--accent-blood); font-size: 0.8rem; }
+        .start-hint::before { left: -25px; } .start-hint::after { right: -25px; }
+
+        /* ================= 游戏本体 ================= */
+        #game-screen { padding: clamp(2vh, 3vh, 20px) clamp(4vw, 5vw, 20px); box-sizing: border-box; justify-content: center; } 
+        
+        #game-container { 
+            width: 100%; max-width: 650px; height: 100%; 
+            display: flex; flex-direction: column; justify-content: center; 
+            position: relative; z-index: 2; padding-bottom: 25px; 
+        }
+
+        /* 剧情区：增加了华丽的上下装饰线 */
+        #story-frame {
+            position: relative; flex: 0 1 auto; max-height: 80vh; margin-bottom: 12px;
+            background: radial-gradient(circle at top, rgba(40, 10, 20, 0.65) 0%, rgba(10, 2, 5, 0.85) 80%);
+            border: 1px solid rgba(196, 18, 48, 0.15); border-radius: 2px;
+            box-shadow: 0 15px 45px rgba(0,0,0,0.95), inset 0 0 40px rgba(196, 18, 48, 0.08);
+            display: flex; flex-direction: column; overflow: hidden;
+        }
+        /* 顶部与底部血色仪式线 */
+        .frame-ornament {
+            position: absolute; left: 50%; transform: translateX(-50%); width: 80%; height: 12px;
+            display: flex; align-items: center; justify-content: center; opacity: 0.7; z-index: 3; pointer-events: none;
+        }
+        .fo-top { top: 0; } .fo-bottom { bottom: 0; }
+        .frame-ornament::before, .frame-ornament::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--accent-blood), transparent); }
+        .frame-ornament .fo-star { color: var(--text-prompt); font-size: 10px; margin: 0 15px; text-shadow: 0 0 8px var(--accent-blood); animation: breath 3s infinite; }
+
+        /* 复古华丽边角 */
+        .sf-corner { position: absolute; width: 24px; height: 24px; pointer-events: none; z-index: 2; }
+        .sf-corner::before { content: ''; position: absolute; width: 100%; height: 100%; border: 2px solid rgba(196, 18, 48, 0.5); }
+        .sfc-tl { top: 6px; left: 6px; } .sfc-tl::before { border-right: none; border-bottom: none; }
+        .sfc-tr { top: 6px; right: 6px; } .sfc-tr::before { border-left: none; border-bottom: none; }
+        .sfc-bl { bottom: 6px; left: 6px; } .sfc-bl::before { border-right: none; border-top: none; }
+        .sfc-br { bottom: 6px; right: 6px; } .sfc-br::before { border-left: none; border-top: none; }
+        .sf-corner::after { content: '✦'; position: absolute; font-size: 10px; color: var(--text-prompt); opacity: 0.4; }
+        .sfc-tl::after { top: 2px; left: 2px; } .sfc-tr::after { top: 2px; right: 2px; }
+        .sfc-bl::after { bottom: 2px; left: 2px; } .sfc-br::after { bottom: 2px; right: 2px; }
+
+        #story-scroll-area {
+            overflow-y: auto; padding: 28px 22px; position: relative; z-index: 1;
+            scrollbar-width: none; -ms-overflow-style: none; display: block; 
+        }
+        #story-scroll-area::-webkit-scrollbar { display: none; }
+        
+        #story-text { 
+            font-size: clamp(0.95rem, 4.2vw, 1.1rem); 
+            line-height: 1.55; letter-spacing: 1.5px; 
+            color: var(--text-story); text-align: justify; 
+            white-space: pre-wrap; padding-bottom: 5px; margin: 0;
+            text-shadow: 0 1px 4px rgba(0,0,0,0.9); 
+        }
+
+        /* 引导框：仪式感强化 */
+        #prompt-box {
+            flex-shrink: 0; background: linear-gradient(135deg, rgba(20, 5, 10, 0.9), rgba(40, 8, 15, 0.85), rgba(20, 5, 10, 0.9));
+            border: 1px solid rgba(196, 18, 48, 0.2); 
+            border-top: 2px solid var(--accent-blood); border-bottom: 2px solid #5a0a18;
+            padding: 15px 20px; border-radius: 2px; opacity: 0; transform: translateY(10px); transition: opacity 1.5s ease, transform 1.5s ease;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.85), inset 0 0 25px rgba(196, 18, 48, 0.1); position: relative; min-height: 60px;
+        }
+        .prompt-label { font-size: 0.8rem; color: #fff; letter-spacing: 4px; margin-bottom: 10px; font-weight: bold; display: flex; align-items: center; justify-content: center; text-shadow: 0 0 10px var(--accent-blood), 0 0 20px var(--accent-purple); }
+        .prompt-label::before, .prompt-label::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, transparent, rgba(240, 168, 185, 0.4), transparent); margin: 0 12px; }
+        #prompt-text { color: #d6bpc4; font-size: clamp(0.85rem, 3.6vw, 0.95rem); line-height: 1.55; margin: 0; font-style: italic; letter-spacing: 0.8px; text-shadow: 0 1px 3px rgba(0,0,0,1); text-align: justify; }
+
+        /* 分支选项框：增加流光与猩红前缀 */
+        #choices-container {
+            flex-shrink: 0; display: flex; flex-direction: column; gap: 12px; 
+            opacity: 0; visibility: hidden; transition: opacity 1s ease;
+            position: relative; width: 100%; z-index: 10;
+        }
+        #choices-container.active { opacity: 1; visibility: visible; margin-top: 18px; }
+        
+        .choice-btn {
+            background: linear-gradient(90deg, rgba(30, 5, 12, 0.9) 0%, rgba(15, 3, 6, 0.8) 100%);
+            border: 1px solid rgba(196, 18, 48, 0.3);
+            border-left: 4px solid var(--accent-blood);
+            color: var(--text-prompt); padding: 15px 20px; font-family: var(--font-serif); font-size: clamp(0.9rem, 3.8vw, 1.05rem);
+            cursor: pointer; text-align: left; border-radius: 2px; transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.6), inset 0 0 10px rgba(196,18,48,0.05);
+            letter-spacing: 1.5px; line-height: 1.45; position: relative; overflow: hidden;
+        }
+        /* 按钮扫光特效 */
+        .choice-btn::before {
+            content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(240, 168, 185, 0.1), transparent);
+            transform: skewX(-20deg); transition: left 0.6s ease;
+        }
+        .choice-btn:hover::before, .choice-btn:active::before { left: 150%; }
+        
+        .choice-btn:hover, .choice-btn:active {
+            background: linear-gradient(90deg, rgba(50, 8, 18, 0.95) 0%, rgba(20, 4, 8, 0.85) 100%);
+            border-color: #ff2a4b; color: #fff; border-left-width: 6px;
+            box-shadow: 0 0 25px rgba(196, 18, 48, 0.6), inset 0 0 20px rgba(196, 18, 48, 0.2);
+            transform: translateX(8px) scale(1.01); text-shadow: 0 0 8px rgba(255,255,255,0.5);
+        }
+
+        #click-hint { 
+            position: absolute; bottom: 0px; left: 0; width: 100%; 
+            text-align: center; font-size: 0.75rem; color: rgba(200, 180, 190, 0.4); 
+            letter-spacing: 8px; opacity: 0; transition: opacity 1s; 
+            text-transform: uppercase;
+        }
+
+        /* ================= 结局页 ================= */
+        #ending-screen { background: radial-gradient(circle at center, rgba(35, 5, 12, 0.9) 0%, #030001 100%); }
+        .end-content { z-index: 2; text-align: center; display: flex; flex-direction: column; align-items: center; padding: 20px; width: 100%; box-sizing: border-box; }
+        .end-cn { font-size: clamp(1.5rem, 6.5vw, 3rem); color: #ff2a4b; white-space: nowrap; letter-spacing: clamp(6px, 3.5vw, 15px); text-indent: clamp(6px, 3.5vw, 15px); margin-bottom: 20px; opacity: 0; font-weight: 300; text-shadow: 0 0 20px rgba(255,42,75,0.5), 0 0 40px var(--accent-purple); }
+        .end-divider { width: 1px; height: 50px; background: linear-gradient(to bottom, transparent, rgba(255, 42, 75, 0.8), transparent); margin: 0 auto 20px auto; opacity: 0; box-shadow: 0 0 10px #ff2a4b; }
+        .end-sub { font-size: clamp(0.9rem, 4vw, 1.1rem); color: #d6bpc4; white-space: nowrap; letter-spacing: clamp(5px, 2.5vw, 18px); text-indent: clamp(5px, 2.5vw, 18px); margin-bottom: 60px; opacity: 0; text-shadow: 0 0 8px rgba(255,255,255,0.3); }
+        
+        #restart-btn { 
+            padding: 12px 45px; font-size: 0.9rem; background: transparent; border: 1px solid rgba(196, 18, 48, 0.4); 
+            color: rgba(232, 224, 227, 0.7); border-radius: 2px; cursor: pointer; letter-spacing: 10px; text-indent: 10px; 
+            opacity: 0; font-family: var(--font-serif); transition: all 0.5s ease; position: relative; overflow: hidden; white-space: nowrap; 
+        }
+        #restart-btn::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(196, 18, 48, 0.3), transparent); transition: left 0.6s ease; }
+        #restart-btn:hover::before { left: 100%; }
+        #restart-btn:hover { border-color: #ff2a4b; color: #fff; box-shadow: 0 0 25px rgba(196, 18, 48, 0.7), inset 0 0 15px rgba(196, 18, 48, 0.4); text-shadow: 0 0 5px #fff; }
+
+        /* ================= 动画 ================= */
+        @keyframes breath { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; filter: brightness(1.2); } }
+        @keyframes revealBleed { 0% { opacity: 0; transform: scale(0.95); filter: blur(8px); } 100% { opacity: 1; transform: scale(1); filter: blur(0); } }
+    </style>
+</head>
+<body>
+
+    <!-- 背景特效群 -->
+    <div class="bg-mandala"></div>
+    <div class="particles"></div>
+    <div class="bg-pattern"></div>
+    <div class="vignette"></div>
+    
+    <!-- 全局复古外框 -->
+    <div class="global-frame">
+        <div class="g-node gn-tl"></div><div class="g-node gn-tr"></div>
+        <div class="g-node gn-bl"></div><div class="g-node gn-br"></div>
+    </div>
+
+    <!-- 开始页 -->
+    <div id="start-screen" class="screen active" onclick="startGame(event)" ontouchstart="startGame(event)">
+        <div class="title-container">
+            <div class="title-cn">永恒的执念</div>
+            <div class="start-hint">进入梦境</div>
+        </div>
+    </div>
+
+    <!-- 游戏本体 -->
+    <div id="game-screen" class="screen">
+        <div id="game-container">
+            
+            <div id="story-frame">
+                <!-- 哥特边角装饰 -->
+                <div class="sf-corner sfc-tl"></div><div class="sf-corner sfc-tr"></div>
+                <div class="sf-corner sfc-bl"></div><div class="sf-corner sfc-br"></div>
+                
+                <!-- 上下仪式感线条 -->
+                <div class="frame-ornament fo-top"><div class="fo-star">✦</div></div>
+                
+                <div id="story-scroll-area">
+                    <div id="story-text"></div>
+                </div>
+
+                <div class="frame-ornament fo-bottom"><div class="fo-star">✦</div></div>
+            </div>
+
+            <div id="prompt-box">
+                <div class="prompt-label"></div>
+                <p id="prompt-text"></p>
+            </div>
+            
+            <div id="choices-container"></div>
+            <div id="click-hint">—— 沉沦下一刻 ——</div>
+        </div>
+    </div>
+
+    <!-- 结局界面 -->
+    <div id="ending-screen" class="screen">
+        <div class="end-content">
+            <div class="end-cn" id="end-cn">我们要永远在一起</div>
+            <div class="end-divider" id="end-divider"></div>
+            <div class="end-sub" id="end-sub">契约已成 · 灵魂相融</div>
+            <button id="restart-btn" onclick="restartGame(event)" ontouchstart="restartGame(event)">重回梦魇</button>
+        </div>
+    </div>
+
+    <script>
+        const scriptData = {
+            "s0": {
+                story: "二十年前，在搬家卡车的轰鸣声中，你亲手将那个破旧的布偶塞进了黑色垃圾袋。你以为那只是一次微不足道的断舍离。然而多年后，废弃旧屋的阴暗角落里，陈年的怨念与不知名的古老契约交织，让他跨越漫长的光阴找到了你。\n\n今夜，当你拖着疲惫不堪的身躯瘫在客厅沙发上时，空气中的温度骤然降至冰点。一双散发着阴冷寒意的手，毫无预兆地从背后死死捂住了你的眼睛。“我找了你整整二十年……我的小主人。”低哑而空灵的男声在耳畔轰然炸开，带着令人毛骨悚然的眷恋。\n\n你惊恐地想要挣扎，却被一股不讲道理的庞大力量牢牢禁锢在怀中。紧接着，一股让人苏麻的炽热感顺着他的掌心，强行侵入你的意识。你感到私处逐渐泥泞不堪，全身的血液都在叫嚣着渴望他更为深入的触碰。你死死咬住苍白的嘴唇，拼命将那声即将脱口而出的甜腻喘息咽回肚子里，身体却控制不住地颤抖起来。",
+                prompt: "轻轻分开双腿，指尖微曲，用中指和食指的指腹在阴蒂上方最敏感的区域，极其轻柔、缓慢地画圈。渐渐加快指尖画圈的速度，先不要插入，只在外侧不断地滑动挑逗。",
+                next: "s1"
+            },
+            "s1": {
+                story: "他绕到你身前，单膝跪在沙发边缘，膝盖陷进柔软的皮质靠垫里，发出微小摩擦声。修长的手指一点点撩起你紧绷的包臀职业裙，暴露出那条洇湿的内裤。客厅的窗帘还没拉严实，窗外老旧路灯的光斑影影绰绰地打在你们纠缠的身体上，甚至能清晰地看到远处偶尔经过的邻居的模糊剪影。\n\n“嘘，不要乱动。要是挣扎的幅度太大，万一被路过的邻居看到就不好了。”\n\n他微笑着贴近你的耳廓低语，如同吐信的毒蛇。随即将那层可怜的布料拨到一旁，微凉的舌尖舔上那颗充血挺立的阴蒂。快感的刺激让你猛地仰起头，喉咙里不受控制地溢出一丝破碎的泣音。你下意识地死死捂住自己的嘴，眼泪涌出眼眶。每当路灯的光扫过窗棂，你都不受控得发抖。那种随时都会彻底暴露在公众视野下的恐慌，将你整个人彻底淹没。",
+                prompt: "用指腹揉着阴蒂缓缓打圈，当淫水渐渐溢出时，加快手指打圈的节奏。将一根手指极其浅地推入穴口，只在边缘轻轻抽插，来到小高潮的边缘就停住五秒不碰。",
+                next: "s2"
+            },
+            "s2": {
+                story: "他的指尖顺着湿滑的穴肉，毫无阻碍地滑入穴口的深处。\n\n“里面这么软，流了这么多水，是不是小主人也很想我...？”他低声呢喃着，两根长指毫不客气地插入穴口，准确无误地勾弄起最深处的G点，大拇指则同时碾磨阴蒂。\n\n这股直击灵魂的快感被放大了无数倍，你甚至感觉到了微弱的电流在脊椎上疯狂乱窜，大脑一片空白。你死死咬着唇瓣，强迫自己忍住喘叫的声音，生怕发出一丁点异响——因为门外走廊上似乎刚刚传来了邻居倒垃圾的沉重脚步声。如果这时候有人敲门，如果有人透过未关紧的防盗门缝隙往里看……可实际上，你的大腿内侧正因为过度的刺激颤个不停。每一次被他抽插都要绷直身体，才能压抑住想要抬高臀部去主动迎合的扭动作。",
+                prompt: "将沾满淫水的两根手指指尖插入。微微弯曲指节，寻找前壁那块微微凸起的软肉，用力勾弄。不许喘出声音。",
+                next: "s3"
+            },
+            "s3": {
+                story: "“你看，你的身体可比你这张逞强的嘴诚实多了。”他抬起手，贪婪地吸吮着指尖上挂着的水液，脸上满是病态的痴迷，那双眼睛仿佛能将你彻底看穿。\n\n他分开你的腿埋进腿间吮吸，手指的抽插勾弄变得更快。这惩罚性的快感灼烧着你仅存的理智。你一边流着眼泪一边却控制不住地主动挺起泥泞的下身去磨蹭他的唇。连续的闷声痉挛让你几乎喘不过气来，肺里的氧气仿佛被抽干。你在一阵阵头皮发麻、视线发白的快感中，艰难地维系着理智。温热的体液一次次不受控制地涌出，将身下的沙发垫彻底浸透，留下一大片根本无法见人的深色水渍。",
+                prompt: "手指并拢，缩短抽插的深度，加快进出的频率。另一只手的指尖时不时对着阴蒂打圈，扭着腰去蹭，去感受连续两三个小高潮在体内不断叠加。",
+                next: "s4"
+            },
+            "s4": {
+                story: "次日清晨，如同宿醉般的酸软让你难受的皱眉。你天真地以为昨晚只是压力过大的春梦。挣扎着想要从一片狼藉的床上爬起来，准备换衣服去公司，就当一切都没有发生过。\n\n谁知，当你推开衣帽间的门，他却像个悄无声息的幽灵般坐在沙发椅上。那双修长苍白的手指，正慢条斯理地把玩着你昨晚换下、还留着水痕的内裤。\n\n“你为什么还在这里！”几乎是瞬间，你又想起昨晚被掌控得动不了的情景“别过来！”\n\n他站起身，带着令人窒息的压迫感将你逼退到全身镜前。“我不会走的。”他动了动嘴角，强行拉住你的手腕，挑了一件衬衫套在你身上，平淡的像什么都没发生过。他站在你身后，双手从你的脊椎一路往下滑，在敏感的腰窝处轻轻揉捏，柔声道：“去上班吧。迟到了就不好了，我会陪着你的。”",
+                prompt: "用手指从下往上在阴唇边抚摸，重点在阴蒂处轻柔画圈并轻轻按压，现在不允许抽插，感受穴口开合的渴望",
+                next: "s5"
+            },
+            "s5": {
+                // 分支1：地铁强袭
+                story: "早高峰的地铁车厢里充斥着沉闷的空气和各种交织的体味，人贴着人，拥挤得几乎没有任何转身的余地。你一路都在神经质地回头，试图在这茫茫人海中彻底甩掉他。你甚至在门关上的最后一秒才惊险地挤进车厢，以为只要身处在人群中间，自己就安全了。\n\n然而，当你刚想扶稳栏杆喘口气，一具熟悉的、带着一丝冷气的胸膛，便从身后贴了上来。周围的乘客似乎完全没有察觉到他的存在。\n\n“跑什么？小主人，你不会是想甩掉我吧？”低沉的嗓音紧贴着耳膜响起，激起你起了一身的鸡皮疙瘩。\n\n你惊恐地想要转身推开他，但一股不可名状的冰冷与滚烫交织的实质触感，无视了所有物理定律，甚至穿透了职业装的布料，从身后强行进入了你的体内。你惊骇得地瞪大双眼，瞳孔骤缩。所有的抗拒在那足以毁灭理智的快感面前摇摇欲坠。在这拥挤到令人窒息的车厢里，你.....",
+                choices: [
+                    { text: "✦ 咬紧牙关，在拥挤的人潮中保持正常不叫出声", next: "s5a" },
+                    { text: "✦ 放弃尊严，用轻微的动作配合他", next: "s5b" }
+                ]
+            },
+            "s5a": {
+                story: "你咬破了嘴唇，努力忍住这过量的快感，向着车厢另一端挤去想着甩开他。然而早高峰的人潮犹如一堵密不透风的墙，将你死死困在原地。每当你艰难地挪动一寸，体内那股冰冷而又充满倒刺般的实质触感就会因为拉扯而更加深入地插进穴里。\n\n他没有再出声威胁，只是那双冰凉的手臂不容拒绝的环过你的腰肢。当列车刹车时，他在人群的推搡中，借势向前重重一挺。\n\n肉棒顶到宫口的瞬间，你已经将理智抛弃。眼前炸开一片白光，身体在周围西装革履的上班族中间，不受控制地痉挛起来。泪水夺眶而出，你只能将脸低下去，强忍着不让自己发出带着泣音的娇喘。你终于明白，在这个怪物面前，你似乎没办法把他甩掉。",
+                prompt: "手指深入最底端。不许发出任何声音，体会那种在密闭、拥挤的公共空间里，为了掩饰失控的呜咽而强忍痛楚与快感，在最深处用手指勾弄G点，直到快要濒临高潮。",
+                next: "s6"
+            },
+            "s5b": {
+                story: "理智与尊严在快感面前显得很好选择。你像是被抽干了最后一丝力气，双腿一软，彻底放弃了支撑，塌下腰对着他暗示地晃了晃。\n\n他像安抚一只受惊的幼鸟般，宽大的手掌轻轻顺着你的脊背抚摸。然而，他身下的动作却并不温柔，下半身的动作愈发深入、缓慢的抽送。你被裹在他的阴影里，在周围嘈杂的报站声中，被迫承受着这种隐秘的侵犯。你的甬道因为极度的羞耻而绞得死紧，隐秘的羞耻让你脸上的表情有些扭曲，只能微微张口喘息，祈祷着自己的表情不会被别人发现。",
+                prompt: "放松双腿，手指配合着缓慢的呼吸，进行抽插。另一只手隔着衣物，用掌根大力揉按阴蒂。接受这种在众目睽睽之下被隐秘侵犯的堕落与安全感交织的错觉，紧咬下唇拼命压抑变调的呼吸声。",
+                next: "s6"
+            },
+            "s6": {
+                story: "到站后你跌跌撞撞地逃出令人窒息的地铁站，清晨冷冽的秋风扑面而来，却根本吹不散你体内的那股燥热。踏入公司大堂，同事们正互相微笑着打招呼。你加快脚步，试图用工作的繁忙来掩盖自己。\n\n谁也不知道，你正经的装扮下，双腿之间正泥泞不堪，残留着一路走来不断渗出的体液。他如影随形地跟在你身边，就在你排队站在打卡机前，准备冷着脸无视他时，他却故意贴着你的耳廓吹出一口气：“早安，刚才在车上下面缠的好紧，现在连内裤都湿透了吧？”\n\n你浑身一颤，拿着工牌的手一哆嗦。眼底闪过一丝慌乱，但双腿却合拢蹭着，试图缓解那股钻心的痒意。",
+                prompt: "用手指在大腿根部轻轻抚摸，去感受被淫水糊住的黏腻。不轻不重的绕着阴蒂打圈。",
+                next: "s7"
+            },
+            "s7": {
+                // 分支2：办公桌下
+                story: "等到了午休时间，偌大的办公区里只剩下零星的敲击键盘声和同事们伏案午睡的均匀呼吸声。你强忍着身体的不适，正准备趴下补个觉，双腿却突然被强行分开。他不知何时到了你的办公桌下。\n\n“这里不可以”你压低声音，想合拢双腿。\n\n然而他并没有听。温热湿滑的口腔毫无预兆地完全包裹住那颗战栗充血的阴蒂，两根带有薄茧的手指插入穴口。你来不及反抗就开始发抖。就在你几乎要失控出声时，隔壁工位的男同事突然站了起来，半个身子探过隔板凑向你：\n\n“上午那组核心数据你核对过了吗？”\n\n巨大的社会性死亡危机瞬间笼罩了你。在这个静谧的午休办公室，你....？",
+                choices: [
+                    { text: "✦ 仓皇掩饰，用颤抖的声音尽快打发他离开", next: "s7a" },
+                    { text: "✦ 死死咬住舌尖，强迫自己用正常语调说话", next: "s7b" }
+                ]
+            },
+            "s7a": {
+                story: "你抠住桌子边缘，冷汗浸透了后背。双腿在狭窄的桌下屈辱地大开着，你声音发颤敷衍着：“核、核对过了……没问题，你先去忙吧。”\n\n男同事疑惑地看了你一眼，似乎察觉到了你的脸色异常苍白，但还是点点头坐下了。你刚松了一口气，桌下的他却因为你不配合“游戏”、企图草草结束而不满。他惩罚性地一口重重咬住你大腿内侧的软肉，同时两根手指猛地抠挖向最深处。\n\n你在办公椅上浑身一僵，死死捂住嘴。底下的吸吮声此时甚至发出了令人面红耳赤的“咕啾”声。在这阵极度的恐惧里，你迎来了剧烈高潮，软烂地瘫在椅背上，大脑一片空白。",
+                prompt: "双腿大开。手指加快速度抠挖敏感点。另一只手用力揉捏乳肉，让自己对着掌心扭腰磨蹭，直到高潮，让淫水因为快感流出。",
+                next: "s8"
+            },
+            "s7b": {
+                story: "极致的恐惧，反而让你变得严肃。你深吸一口气，强行让自己看起来正常：“第三页的数据转化率有点异常，我已经批注了，你一会重新跑一遍模型……”\n\n就在你一本正经地布置工作时，桌下的他眼底闪过一丝醋意。灵活的舌尖重重舔舐在你的阴蒂上，手指向上顶弄。大脑几乎宕机，你在同事的目光中，一边逻辑清晰地探讨着枯燥的数据，一边在裙底一股股喷水，昂贵的椅垫被彻底浸透。刚才抵抗早被抛到九霄云外。。",
+                prompt: "手指对阴蒂按压揉搓，同时另一只手在穴肉里向上方顶弄。把自己快速送上高潮。",
+                next: "s8"
+            },
+            "s8": {
+                story: "惊心动魄的午休终于结束，你慌乱地在桌下匆匆擦去那些顺着大腿内侧流到小腿的水渍。下午的部门例会即将开始，你深吸了一口气，强撑着酸软的双腿走向会议室。走廊上，他与你并肩而行，手指肆无忌惮地在空气中隔空描摹着你起伏的胸前轮廓。\n\n“别碰我……”你从牙缝里挤出微弱的警告。\n\n“这么急着走？，那就带着我的味道去给他们讲你的年度PPT吧。”他恶劣的轻笑声在你耳边盘旋。\n\n推开沉重的会议室大门，迈开腿的那一瞬间，你惊恐地发现，甬道竟然因为他的一句下流话不可抑制地一阵痉挛收缩，一大股温热的液体涌了出来。身体渐渐被调教成了一听到他的声音就会流水发情的状态。你几乎要扶着门框，才能勉强维持着正常走到座位上。",
+                prompt: "手在小腹处重重按压，感受深处的空虚，手指不要碰阴蒂，感受高潮后的酥麻。",
+                next: "s9"
+            },
+            "s9": {
+                story: "会议室的长桌前，主管正在台前对着投影仪侃侃而谈，气氛严肃。他却大模大样地坐到了你的座位上，一把将你扯入怀中，让你背对着他跨坐在他结实的大腿上。\n\n“专心点，小主人，再乱动，一会你连话都说不清楚了。”\n\n那根可怕的巨物顺着湿滑的缝隙再次深深埋入你的体内，开始了缓慢的研磨。在四周同事眼中，你是端坐在椅子上认真记录，实际上你的脸颊却泛着不自然的潮红。每当主管停顿喝水，他就在底下借着桌子的掩护狠狠往上顶弄，那股酸麻逼得你猛地倒吸一口凉气，只能假装咳嗽掩饰。脑海里全是自己失态尖叫的画面。一连串的小高潮让你双腿在桌下失控地痉挛，你可悲地发现，自己竟然对这种暴露产生了快感。",
+                prompt: "手指插入开合的穴口，放慢速度，进行极其缓慢却深入研磨。偶尔抽出手指快速绕着阴蒂打圈，加快速度直到濒临高潮。",
+                next: "s10"
+            },
+            "s10": {
+                story: "散会的那一刻，你几乎是逃一般地离开了会议室，步伐僵硬，生怕被别人看出怪异。你拿着文件快步走向走廊尽头的电梯，额头上满是冷汗，心里反复告诉自己：不能再这样沉沦下去了，我必须摆脱他。\n\n然而，就在你踏入轿厢，电梯门缓缓合上的那一刹那，原本空无一人的封闭空间内，空气骤然降温。他的身影在角落的阴影中凝聚成型。\n\n“逃那么快做什么？又想骗自己说你讨厌这样？”他向前一步，一把将你扯入怀中，微凉的气息喷洒在你脸上：“刚才开会的时候，你不是很爽吗，水流得椅子都快湿透了。到了没人的地方，还要装吗？”他毫不留情地撕碎了你最后一点虚伪的自尊心。",
+                prompt: "停住动作，感受那股快要高潮想要插入的渴望，用手把流出的淫水抹在腿根。",
+                next: "s11"
+            },
+            "s11": {
+                story: "电梯下行的短短十几秒里。他将你整个人翻转过去，按在冰冷光滑的镜壁上，撩起你的裙摆，直接用肉棒抽插。\n\n“把头抬起来，看看上面的监控。你现在的反应已经是离不开我了吧？”他捏住你的下巴，强迫你面对轿厢右上角闪烁的红灯。\n\n你被迫看着镜头，清晰地在对面的镜子里看到了自己现在的模样——衣衫凌乱，眼神迷离，主动迎合着他的撞击。这种即将身败名裂的刺激，彻底击碎了你脑海中所有关于“抗拒”的伪装。你没有推开他，反而地抬起一条腿，在封闭的轿厢里不管不顾地喘叫、不受控的滴水。在这一刻，你绝望地承认，自己已经彻底沦陷成了一个被他支配的玩物。",
+                prompt: "用三根手指进行毫无节制、最猛烈、最狂乱的抽插。另一只手五指张开，粗暴地揉捏拉扯自己的乳房。加快手指速度，每一击都要撞击到最深处。抬眼死死盯着正前方，想象那里有一颗监控摄像头。放弃心中最后那一点象征性的抗拒，任由浪叫溢出，持续冲刺到高潮边缘，想象汁液疯狂喷溅的狂欢。",
+                next: "s12"
+            },
+            "s12": {
+                // 分支3：周五决战
+                story: "你带着被淫水泡透的内裤回了家，推开家门，房间里静悄悄的，没有开灯。他走上前来，将你抵在坚硬的门背上，单手挑开你真丝衬衫的前三颗纽扣，露出大片雪白的肌肤。\n\n“在外面不够爽吧？没关系现在到家了。”他低沉的声音在黑暗中回荡，指腹顺着你的脊椎缓慢抚摸，引起阵阵战栗。\n\n曾经试图将他赶走的念头早已灰飞烟灭，取而代之的是一种令人无法自拔的依赖。你心里比谁都清楚，接下来的整个周末，这个偏执的恶魔绝对不会让你有哪怕一秒钟的时间双脚沾地。在这彻底跌入深渊的前夕，你....？",
+                choices: [
+                    { text: "欲火烧毁理智，主动撕开衣物将他推倒跨坐索求", next: "c3a" },
+                    { text: "抛弃人类尊严，像发情的母犬般跪伏在地摇尾乞怜", next: "c3b" }
+                ]
+            },
+            "c3a": {
+                story: "压抑了一周的欲火在此刻彻底引爆。你不仅没有闪躲，反而双手颤抖着、粗暴地扯开了自己剩余的纽扣，任由昂贵的真丝衬衫滑落脚边。你猛地发力将他推倒在玄关的墙上，像一头失去理智的野兽般急不可耐地跨坐上去，胡乱地亲吻着他冰冷的下颌。\n\n“别废话了……快给我……填满我……”你红着眼睛，隔着布料用泥泞不堪的私处疯狂磨蹭着他早已挺立的部位。曾经高冷骄傲的职场精英，如今只剩下对交媾最原始、最下贱的渴求。\n\n他眼底闪过一丝意外，随即化作浓浓的嘲弄与兴奋。他一把掐住你乱动的细腰：“小主人真是饿坏了，不过，周末的狂欢得按我的规矩来。既然这么主动，那就得让你好好长长记性。”",
+                prompt: "站立或靠墙，假装跨坐在他身上。双手用力揉捏自己的胸部，指尖刮擦乳头。下身用力收缩，用大腿根部互相摩擦，手指快速、粗暴地在阴唇外部和阴蒂上打圈，模拟那种迫不及待想要被填满的急切与饥渴。放弃所有矜持，低声喘息着说出索求的下流话语。",
+                next: "s13"
+            },
+            "c3b": {
+                story: "最后一丝作为人类的羞耻心也荡然无存。你顺着门板软软地滑跪在地，双膝分开，像一只真正发情的母犬一般，将上半身伏低，高高撅起那泥泞不堪的臀部。你甚至主动攀上他的小腿，用脸颊贪恋地蹭着他的西裤，声音甜腻、毫无底线地哀求着：\n\n“主人……我受不了了……求你肏我……随便怎么弄坏我都可以……”\n\n你心甘情愿地将自己降格为一件只为取悦他而生的肉玩具。他居高临下地俯视着你这副烂泥般的下贱模样，眼中的红光大盛，宽大冰冷的手掌一把揪住你的头发强迫你仰起头：“真乖。既然这么想当我的母狗，那就得给你套上该有的项圈，让你明白自己到底是个什么东西。”",
+                prompt: "跪伏在地，臀部尽可能撅高，腰部塌下。将一根手指极浅地含在嘴里模拟讨好的舔舐，另一只手从后方绕过，两根手指插入穴内进行缓慢但深入的抽送。想象自己完全失去了人类的尊严，变成一只只知道交配的宠物，眼神迷离地向上看着虚空，发出黏腻的娇喘。",
+                next: "s13"
+            },
+            "s13": {
+                story: "周末的早晨，阳光透过厚重的窗帘缝隙洒进卧室。你在一阵难以启齿的空虚中醒来，发现他不知从哪里找来了一条柔软却坚韧的红丝带，将你的双手手腕死死绑在了黄铜床头栏杆上，双腿则被粗暴地大开，用领带固定在两侧的床柱上，彻底暴露出你最脆弱、最泥泞的私密姿态。一根冰冷粗大的震动棒被涂满了润滑液，毫不留情地推入到底，并直接开启了最高频率的最大档。\n\n“叫出声来，小主人。让我听听，你现在到底有多想要我。”\n\n经过这几天在危险公共场合的极限拉扯，你认清了自己内心的真面目。曾经那个高傲、试图反抗的你已经死在了深渊里。面对他的逼迫，你不再有丝毫的咬唇强忍，而是饥渴地挺起腰肢迎合着那根冰冷的玩具，扬起脖颈，任由甜腻淫荡的呻吟声脱口而出。满脑子只有如何让他更加粗暴地占有你的下贱念头。",
+                prompt: "躺在床上，双手交叠高举过头顶，极力模拟被完全绑缚的屈辱姿态。双腿尽最大幅度大开，毫无保留地暴露自己。用两根手指插入并进行极高频率的快速抽插，拇指在外侧不停刺激阴蒂。深刻感受那种被束缚却甘之如饴的堕落感。不再有任何心理负担，顺从地发出那种完全抛弃羞耻的娇喘声，持续刺激直到阴唇极度肿胀。",
+                next: "s14"
+            },
+            "s14": {
+                story: "听到你终于不再有丝毫刻意压抑，那放浪形骸的娇喘声回荡在卧室内，他漆黑的眼底瞬间闪过一丝近乎疯狂的满足与狂热。他一把抽出那根还在嗡嗡作响的玩具随意扔在地毯上，换上自己那根早已胀痛难忍、粗长滚烫的实体，没有任何前戏和缓冲，对准那张翕张流水的缝隙，直接插到宫口。\n\n“这就对了，这才是我的小主人。承认吧，你早就离不开我了。”\n\n被绑缚的身体迎来了彻底的狂欢。你扭动着腰肢，拼命收缩甬道去夹紧他，不知疲倦地迎合着他的撞击。失禁般的潮吹一次次发生，透明的体液如同喷泉般洒向半空，将整个床单彻底毁掉。你流着眼泪，毫无顾忌地大声浪叫着祈求他再深一点。在这张凌乱的床上享受着极致的堕落。",
+                prompt: "保持双腿大开的姿势，将手指增加到三根，进行毫无保留、最深度的抽插，模拟被瞬间贯穿的撕裂与充实感。另一只手疯狂、快速地拨弄揉按阴蒂。完全放开腰部的限制，主动向上迎合撞击。加快节奏，直到逼出那种大脑失控、宛如失禁般的潮吹。大声浪叫出声，贪婪地享受这场毫无保留的放纵高潮。",
+                next: "s15"
+            },
+            "s15": {
+                story: "此时的他完全褪去了那一层温柔的伪装，像一头发了疯的野兽，不知疲倦地驰骋。那根坚硬如铁的实体以极其凶狠的力道一下下重重凿击着你最脆弱的子宫口。你胸前饱满的乳肉随着撞击晃动，粉嫩的乳尖被他毫不留情地又咬又吸，留下触目惊心的深红色印记。\n\n“看着我！告诉我，你这具身体现在是谁的？！”他一把扯住你汗湿的长发，强迫你仰起头看着他充满血丝的眼睛，病态地逼问。\n\n痛觉与快感交织融合，形成了世界上最致命的毒药。你哭喊着大声回答：“不想你走……永远也别走！我全身上下每一个地方都是你的……快占有我吧！”你叫着疯狂迎合他每一次直达灵魂的深插。最终的高潮被他强行锁死在顶点，那种大脑空白、灵魂战栗的感觉被生生延长了数分钟之久，你爽得眼眸失去焦距，意识几乎消失。",
+                prompt: "用尽全力，用三根手指深插到极点，每一次都要狠狠撞击深处最酸胀的部位。同时，另一只手狠心用力捏揉、揪扯乳头，模拟那种被野兽疯狂吮咬、痛并快乐着的极致痛觉。身体像通了电一样疯狂扭动，想象他扯着你头发时的逼问，大声回应自己的归属。加快抽送直到连续爆发潮吹，扯着嗓子尖叫释放，让快感炸成白光并无限延长，直到手脚发麻抽搐。",
+                next: "s16"
+            },
+            "s16": {
+                story: "这场漫长、激烈到几乎要将你彻底拆散重组的调教终于告一段落，绑缚在手腕上的红丝带被他轻柔地解开。你像一个破布娃娃一样，浑身抽搐着瘫软在凌乱不堪的床铺上。白皙的手腕上留下了两道刺眼、甚至破皮的红痕。他将软泥般的你小心翼翼地抱进怀里，动作轻柔得仿佛对待一件稀世珍宝。他低下头，像小时候你抱着那个破旧布偶安抚它一样，满眼心疼又带着令人毛骨悚然的病态痴迷，伸出舌尖一点点舔舐着你手腕上的勒痕。\n\n“对不起……可是……我真的好怕，怕你像一开始那样抗拒我，怕你有一天清醒过来，又要像二十年前那个下午那样，无情地把我扔进垃圾桶里丢下我……”\n\n他将脸埋在你的颈窝，声音里透着令人心碎的脆弱与极度的偏执。那如同被抛弃的幼兽般的眼神，彻底将你内心深处某种病态的母性与扭曲的爱意点燃。你看着眼前这张俊美却伤痕累累的脸庞，缓缓伸出颤抖的双手，主动、紧紧地环住了他的脖颈。曾经所有的反抗与尊严，都在这无底线的肉体交融中化为灰烬，尘封的愧疚与燃烧殆尽的情欲，在此刻彻底、完美地融合在一起。",
+                prompt: "瞬间放下手上所有激烈的动作，让身体彻底瘫软在床上。用手指极其轻柔地抚摸、圈弄自己的手腕，去感受刚才想象中留下的那种微微的刺痛，以及随之而来被怜爱舔舐的诡异错觉。双手交叠放在心口，平复那剧烈如鼓的心跳。深吸一口气，在脑海中细细描绘他那种明明强大却又极度脆弱、偏执疯狂的眼神。从心底彻底向这段病态的感情低头，接纳自己已经变成一个毫无底线、只想永远沉沦的玩物的事实。",
+                next: "s17"
+            },
+            "s17": {
+                story: "这是你们之间最终的、也是最彻底的和解与堕落时刻。在短暂的休息后，你深吸了一口气，不知哪里来的力气，猛地发力主动翻身，将毫无防备的他重重压在了身下。你跨开双腿，跪坐在他的腰腹上方，双手撑着他的胸膛，用那张早已红肿外翻的缝隙，对准了那根依旧精神抖擞的凶器，一点点地往下坐，直到将其完全吞没进自己的身体里。\n\n“你看，我再也不会推开你了。我要你，把你的一切都给我，把我全都塞满……”\n\n你主动吐露着令人面红耳赤的低语，双手迷恋地抚摸着他胸肌的轮廓，纤细的腰肢像装了不知疲倦的马达一样，狂野地、不知餍足地上下吞吐着。饱满的乳房随着激烈的起伏动作，在空气中晃动出极度诱人的波浪。不再有任何被迫的屈辱，不再有那些试图找回理智的可笑挣扎，这是你清醒地、自愿陷入的一场情欲狂欢。你闭上眼睛，微笑着，彻底沉沦在这份他耗费二十年光阴为你精心编织的情欲牢笼中，心甘情愿地献祭自己的灵魂。",
+                prompt: "改为充满饥渴的跪坐骑乘姿势。用手指（或跨骑柔软的枕头），由上至下、快速且狂野地扭动腰肢进行吞吐。另一只手毫不掩饰地托举、粗暴地揉弄自己的乳房，欣赏它的晃动。彻底抛开平时所有的羞耻心，大声喊出最下流、最渴望的告白。不断加快下坐的力度，直到汁液四溅的高潮再次来临，尽情享受这种由被动承受的受害者，彻底转变为主动索求的深渊信徒的堕落快感。",
+                next: "s18"
+            },
+            "s18": {
+                story: "随着快感的不断堆叠，你的骑乘速度越来越快，几乎化作了一道残影。深处那些被彻底开发出来的软肉，如同拥有了自我意识一般，贪婪而疯狂地收缩着、绞紧着，拼命吸吮着他进入的每一寸滚烫，仿佛要将他整个人连皮带骨地融进自己的身体里，永远融为一体。\n\n“好软……这么主动，这么会咬，是要把我的灵魂都一起榨干了吗，我贪婪的小主人？”\n\n他低哑地喘息着，眼角因为极度的爽快而泛红。他粗糙的大手猛地向上探出，死死掐住你纤细的腰肢，不再让你掌握主导权，而是配合着你下落的趋势，带着毁灭一切般的力道，由下至上地发起最猛烈、最残暴的顶撞。两人在这场不顾死活的狂乱交锋中，终于迎来了最为剧烈的、毁天灭地的同步高潮。你猛地仰起头，天鹅般的颈项拉伸到极致，口中发出泣音般尖锐的尖叫，指甲在他胸前划出长长的血痕。身体在高潮的强烈余韵中，像触电般剧烈抽搐、颤抖个不停，彻底放飞了为人最后的底线。",
+                prompt: "以最快的速度、最狂暴的节奏继续骑乘手指或道具。将全部注意力集中在阴道肌肉上，用尽全力去收缩、拼命吸吮，伴随着每一次撞击，发出毫无保留的浪叫声。在模拟最终同步高潮的爆炸瞬间，猛地加快动作，直到大腿抽筋、身体不受控制地剧烈颤抖、痉挛僵硬。彻底放飞自我，承认自己已经没救了，享受这种身心皆被彻底填满、撑开，与他融为一体、永不分离的极致体验。",
+                next: "s19"
+            },
+            "s19": {
+                story: "毁天灭地的高潮刚刚过去几秒钟，你还沉浸在大脑缺氧的眩晕中，他却突然猛地一发力，抱着你直接翻了个身，重新夺回了绝对的主导权。他将你牢牢压在身下，将双腿折叠压向胸口，用一种最深、最不留任何余地、几乎要将你捅穿的狂暴姿态，深深钉死在你的身体最深处。\n\n伴随着一声低沉的嘶吼，那根坚硬的东西在你体内剧烈地跳动着，将一股接一股滚烫、浓稠得仿佛岩浆般的液体，毫不保留地尽数泵入你柔软的深处，烫得你浑身一哆嗦。“全都给你……一滴都不剩。从今以后，你这里的每一个角落，都只能装满我的东西。”他在你耳边霸道地宣誓。\n\n你感受着小腹处被彻底填满的沉重坠胀感，在强烈到让人手脚发麻的余韵中，不仅没有觉得恶心，反而露出了一个极度餍足、甚至有些痴迷的病态微笑，任由那些黏腻的白浊填满身体内部的每一个褶皱。两人汗津津的身体紧紧相贴、毫无缝隙地相拥在一起，听着彼此如擂鼓般的心跳。这份跨越了二十年漫长光阴的病态执念，终于成功将一个高傲的灵魂，侵蚀成了一滩离不开他的春水。",
+                prompt: "恢复仰躺的姿势，双腿尽可能屈起向两边打开。用手指深深插入到底，重重抽送几下后，猛地停止在最深处，不再拔出，静静感受那种被无尽的热流强行灌满、撑开的极度肿胀感。另一只手紧紧、用力地环抱住自己的肩膀。嘴角上扬，露出发自内心的、彻底堕落的痴迷微笑，享受高潮退去后肌肉酥麻、大脑空白的疲倦感。全身心沉浸在这种被彻底占有、从里到外被完全标记的巨大满足感中。",
+                next: "s20"
+            },
+            "s20": {
+                story: "夜阑人静，窗外只剩下偶尔呼啸而过的风声。你们在浴室里胡乱冲洗了一番后，你拖着几乎散架的身体躺在换了新床单的被窝里。眼皮重得像灌了铅，刚准备陷入沉睡，他便如同往常一样，从身后贴上来，用宽大的胸膛紧紧拥住你单薄的后背。那股熟悉的、能放大所有感官刺激的强烈暖意，再次于无声无息间在你的经络里运转开来。\n\n那根明明刚洗干净、甚至才宣泄过不久的实体，竟然不知何时又恢复了精神抖擞的状态，顶端流出的清液混合着残存的水汽，顺着你大腿根部的曲线，轻车熟路地滑进了那个依旧温暖湿润、甚至一直在隐隐抽动的缝隙里。“安心睡吧，不要怕。我会一直待在你的身体里面，一整夜都守着你，哪里也不去。”他在你耳畔落下轻柔的吻。\n\n如果是几天前，你一定会惊恐地挣扎逃离。但现在，你早已在这一遍遍的调教中彻底堕落。你甚至连眼睛都没睁开，只是凭借着本能，主动向后挺翘起那饱满的臀部，贪婪地将他吃得更深、裹得更紧。你的嘴里无意识地呢喃着几句听不清的娇嗔，双手拉过他的手臂环住自己的腰，毫无防备地、安然地享受着这份只属于深夜的、零距离的绝对亲密。",
+                prompt: "在被窝里侧躺下来，从后方的角度插入手指。无需剧烈运动，只需主动、极其缓慢且淫靡地扭动腰肢，向后方去顶弄迎合，假装他在你的身后。低声、含糊不清地呢喃几句黏腻的细语，细细体会那种曾经极度抗拒，如今却主动索求的巨大反差。缓慢但有力地加快几次抽插的频率，然后闭上眼睛，去享受这种夜间被一个强大的恶魔从背后紧紧抱紧、填满的绝对安全感。",
+                next: "s21"
+            },
+            "s21": {
+                story: "在你处于那种半梦半醒、意识混沌的边缘状态时，他开始动了。他极其精准、克制地控制着每一次抽插的深度与速度。时而只是在入口处极浅极慢地研磨，用顶端不断挑逗着那圈敏感的褶皱；时而又突然发力，整根没入，重重碾过那个只要一碰就会让你发狂尖叫的凸起敏感点。\n\n你表面上的呼吸依旧保持着均匀绵长，眼睫毛微垂，整个人仿佛还安详地沉浸在甜美的梦乡里。可实际上，你那具早已被彻底改造的身体，却在温暖的被窝里极其淫荡地弓起了一道诱人的弧度，胸前那两颗红豆早已硬挺地戳着睡衣的布料，下身不断溢出的汁液将他的大腿都弄得一片泥泞。\n\n梦境中光怪陆离的碎片与现实里下半身不断传来的真实快感完美地交织在一起，让你的意识彻底模糊。你甚至分不清自己究竟是在梦里被他无情地侵犯，还是在现实中贪得无厌地榨取他。这种亦真亦幻的极致刺激，让你在完全无意识的状态下，身体不断地痉挛，一次又一次地走向潮吹的巅峰，在睡梦中度过了一个荒诞的漫漫长夜。",
+                prompt: "极力模拟熟睡时的侧卧睡姿，闭着眼睛。用手指进行极具技巧性的、时浅时深、甚至停顿吊胃口的抽插。在此期间，将身体夸张地向后弓起，如同拉满的弓弦，疯狂且毫无章法地摇摆臀部，去寻找那个能带来最刺激触电感的角度。去细细感受那一波波如同梦幻般不真切、却又极其猛烈的高潮迭起，想象大量的淫水在睡梦中失禁般地涌出，再次将崭新的床单打湿的一片狼藉。",
+                next: "s22"
+            },
+            "s22": {
+                story: "随着时间的推移，这种每晚必行的、仿佛某种神圣仪式般的睡眠纠缠，已经逐渐成为了你们之间最隐秘、却也最不可或缺的常态。在那些表面看似熟睡、实则暗潮汹涌的无数个夜晚里，你的身体和心理都发生了不可逆转的变异。\n\n你清楚地知道，自己已经从那个企图用冷漠和愤怒赶走他的正常人，彻彻底底地变成了一具一天不挨肏就浑身难受、永远也离不开他的专属容器。只要他在里面稍微动弹一下，你的肌肉就会如同有生命般，自动收缩绞紧，拼命挽留他。在那些极度空虚的梦魇里，你的内心甚至会疯狂叫嚣着，渴望他用更加粗暴、更加摧毁一切的方式来对待你。\n\n而他，则越发偏执地将你紧紧禁锢在怀里，那双铁臂勒得你生疼，却也带给你病态的安全感。他就像一个在黑暗洞穴里守候了千万年、终于得偿所愿的远古恶龙，死死地盘踞着、守卫着他好不容易才夺回来的无价珍宝，绝对不允许任何人再多看一眼。",
+                prompt: "双腿用力夹紧，大腿根部紧绷。用尽全力去收缩阴道肌肉，如同要将进入的手指生生绞断一样去吸吮。在内心里大声、疯狂地承认自己离不开他，渴求更猛烈、更暴虐的对待。然而，表面上却必须强迫自己保持最安静、最均匀的呼吸起伏。手指在下身反而要加速进行疯狂的抽动，在极静与极动的撕裂感中，深深体会这种充满病态控制欲与偏执占有欲的、让人不可自拔上瘾的日常快感。",
+                next: "s23"
+            },
+            "s23": {
+                story: "“你知道吗？你五岁的时候，每天晚上都要紧紧抱着我，把脸埋在我的绒毛里才能安稳入睡……从今往后，那些绒毛变成了我的这具身体，以后，每天晚上都要换我从里面，死死地抱着你，填满你。”\n\n他低沉、痴迷、甚至带着一丝沙哑的声音，成了你每晚临睡前最有效、也最致命的催眠曲。伴随着那根实体在体内强有力的、不知疲倦的打桩般律动，你在这个深夜里彻底抛弃了所有的自尊。你不再有任何抗拒的念头，而是放声大哭。那混杂着潮吹的透明汁液，与因为极度快感而流下的生理性泪水混合在一起，将枕巾彻底浸透。你的双手在黑暗中胡乱地摸索着，直到死死反扣住他那宽大冰凉的手掌，十根手指用力地穿插交叠在一起，紧紧相握。你太害怕失去了，曾经避之不及的恶魔，现在却成了你全部的生命依靠，你只想就这样和他无休止地交媾纠缠，直到世界末日。",
+                prompt: "双手紧紧环抱住自己的身体，指甲掐进肉里。下身用手指模拟出最稳定、最有力、打桩机般的律动抽插，彻底扭动腰肢，迎接那汹涌而至的潮吹。不要压抑情绪，让眼眶泛酸，让生理性的泪水夺眶而出，彻底释放所有的防备，接纳自己这副扭曲又深情的灵魂。沉沦在这绵长无绝期的高潮余韵之中，用另一只手的手指死死抓紧身下的被单，直到肌肉僵硬、关节酸痛，也在心底发誓绝不愿松手分离。",
+                next: "s24"
+            },
+            "s24": {
+                story: "回首这段荒唐而又不可思议的经历，从最初那个寻常的深夜，你天真地以为只要忍辱负重一晚就能结束一切；到白天在人来人往的写字楼办公室、在拥挤不堪的早高峰地铁里，你充满愤怒与恐惧，却又在身体的背叛下面临着随时可能社死崩溃的极致拉扯；再到最终彻底卸下心防，在周末的双人床上甘愿被绑缚、抛弃所有的尊严，彻底认命化身为深渊的专属信徒。\n\n这所有不可理喻、荒谬透顶的情欲场景，都被他用二十年积攒下来的病态爱意与幽暗的执念，一针一线地编织成了一张巨大且密不透风、令人无处可逃的网。\n\n“小主人，欢迎回家。认命吧，你永远、永远都只能属于我一个人，直到这具肉身腐坏，直到你的灵魂腐朽。”\n\n他低沉的嗓音犹如恶魔签下的最终契约。这份极度危险、足以毁灭一切，却又让人如吸食毒品般疯狂上瘾的情欲牢笼，将你温柔而残忍地永远锁死在其中。而你，在这场漫长且无可救药的调教中，早就已经心甘情愿地、亲手交出了那把唯一可以逃生的钥匙，沉溺其中，永生永世，再也不愿醒来。",
+                prompt: "在脑海中如电影快进般，回顾从一开始天真地以为会结束、到疯狂抗拒、再到最终彻底堕落的所有场景画面。用手指综合所有的手法和节奏，从极轻柔的碾压研磨，逐渐过渡到最猛烈、毫无保留的贯穿。彻底放飞自我，身体随着节奏狂乱扭动，迎接这场最没有退路的最终高潮。深深感受这永恒牢笼带给你的、病态却极度安稳的满足感。闭上眼睛，嘴角勾起一抹彻底沉沦的微笑，低声呢喃，满心欢喜地接受这段病态的爱。",
+                next: null
+            }
+        };
+
+        let currentId = "s0";
+        let typingTimeout;
+        let promptDelayTimeout;
+        let lockClick = false; 
+        let currentPhase = 'IDLE';
+        let gameStarted = false;
+
+        const storyContainer = document.getElementById('story-text');
+        const scrollArea = document.getElementById('story-scroll-area');
+        const promptBox = document.getElementById('prompt-box');
+        const promptText = document.getElementById('prompt-text');
+        const clickHint = document.getElementById('click-hint');
+        const choicesContainer = document.getElementById('choices-container');
+
+        function switchScreen(screenId) {
+            const screens = document.querySelectorAll('.screen');
+            for (let i = 0; i < screens.length; i++) {
+                screens[i].classList.remove('active');
+            }
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function startGame(event) {
+            if (event) event.preventDefault();
+            if (gameStarted) return;
+            gameStarted = true;
+            
+            switchScreen('game-screen');
+            setTimeout(() => {
+                currentId = "s0";
+                loadScene();
+            }, 1000); 
+        }
+
+        function typeWriter(text, index, targetElement, speed, callback) {
+            if (!text) {
+                if (callback) callback();
+                return;
+            }
+            if (index <= text.length) {
+                targetElement.textContent = text.substring(0, index);
+                index++;
+                if (targetElement === storyContainer) scrollArea.scrollTop = scrollArea.scrollHeight;
+                typingTimeout = setTimeout(() => typeWriter(text, index, targetElement, speed, callback), speed); 
+            } else {
+                if (callback) callback();
+            }
+        }
+
+        function loadScene() {
+            if (!scriptData[currentId]) return;
+            
+            lockClick = true; 
+            setTimeout(() => { lockClick = false; }, 300); 
+
+            const currentScene = scriptData[currentId];
+            
+            storyContainer.textContent = '';
+            
+            promptBox.style.opacity = '0';
+            promptBox.style.transform = 'translateY(10px)';
+            promptText.textContent = '';
+            choicesContainer.classList.remove('active');
+            choicesContainer.innerHTML = '';
+            clickHint.style.opacity = '0';
+            
+            if (currentScene.choices) {
+                promptBox.style.display = 'none'; 
+                
+                for (let i = 0; i < currentScene.choices.length; i++) {
+                    const choice = currentScene.choices[i];
+                    const btn = document.createElement('div');
+                    btn.className = 'choice-btn';
+                    btn.textContent = choice.text;
+                    btn.onclick = (e) => makeChoice(choice.next, e);
+                    btn.ontouchstart = (e) => makeChoice(choice.next, e);
+                    choicesContainer.appendChild(btn);
+                }
+            } else {
+                promptBox.style.display = 'block'; 
+            }
+            
+            currentPhase = 'STORY_TYPING';
+
+            typeWriter(currentScene.story, 0, storyContainer, 25, () => {
+                if (currentPhase === 'STORY_TYPING') {
+                    if (currentScene.choices) {
+                        showChoices(currentScene.choices);
+                    } else {
+                        startPromptPhase();
+                    }
+                }
+            });
+        }
+
+        function showChoices(choices) {
+            currentPhase = 'WAITING_FOR_CHOICE';
+            choicesContainer.classList.add('active');
+            clickHint.style.opacity = '0'; 
+            scrollArea.scrollTop = scrollArea.scrollHeight;
+        }
+
+        function makeChoice(nextId, event) {
+            if (event) event.stopPropagation(); 
+            if (lockClick) return;
+            lockClick = true;
+            
+            choicesContainer.classList.remove('active');
+            currentId = nextId;
+            setTimeout(() => { loadScene(); }, 400);
+        }
+
+        function startPromptPhase() {
+            currentPhase = 'PROMPT_TYPING';
+            const currentScene = scriptData[currentId];
+            
+            promptBox.style.opacity = '1';
+            promptBox.style.transform = 'translateY(0)';
+            
+            promptDelayTimeout = setTimeout(() => {
+                if (currentPhase !== 'PROMPT_TYPING') return;
+                typeWriter(currentScene.prompt, 0, promptText, 35, () => {
+                    if (currentPhase === 'PROMPT_TYPING') finishPhase();
+                });
+            }, 400); 
+        }
+
+        function finishPhase() {
+            currentPhase = 'DONE';
+            setTimeout(() => { clickHint.style.opacity = '1'; }, 200);
+        }
+
+        function scrambleReveal(element, finalText, delay) {
+            const chars = '✦✧幻虚无灭死生魂念怨恨痴贪沉沦＠＃＄％＆＊＋？';
+            setTimeout(() => {
+                element.style.opacity = '1';
+                let frame = 0; let length = finalText.length;
+                let interval = setInterval(() => {
+                    let finished = 0; let displayString = '';
+                    for (let i = 0; i < length; i++) {
+                        if (finalText[i] === ' ' || finalText[i] === '·') { displayString += finalText[i]; finished++; continue; }
+                        let threshold = i * 4; 
+                        if (frame >= threshold + 10) { displayString += finalText[i]; finished++; } 
+                        else { displayString += chars[Math.floor(Math.random() * chars.length)]; }
+                    }
+                    element.textContent = displayString; frame++;
+                    if (finished >= length) { clearInterval(interval); element.textContent = finalText; }
+                }, 50);
+            }, delay);
+        }
+
+        function showEndingScreen() {
+            switchScreen('ending-screen');
+            const cnText = document.getElementById('end-cn');
+            const divider = document.getElementById('end-divider');
+            const subText = document.getElementById('end-sub');
+            const btn = document.getElementById('restart-btn');
+
+            cnText.textContent = ''; subText.textContent = '';
+            scrambleReveal(cnText, '我们要永远在一起', 800);
+            setTimeout(() => { divider.style.animation = 'revealBleed 2s ease forwards'; }, 2500);
+            scrambleReveal(subText, '契约已成 · 灵魂相融', 3800);
+            setTimeout(() => { btn.style.animation = 'revealBleed 2s ease forwards'; }, 6500);
+        }
+
+        function restartGame(event) {
+            if(event) event.stopPropagation(); 
+            location.reload(); 
+        }
+
+        function handleGlobalClick(event) {
+            if (lockClick) return; 
+            if (currentPhase === 'WAITING_FOR_CHOICE') return; 
+
+            if (currentPhase === 'STORY_TYPING') {
+                clearTimeout(typingTimeout);
+                const currentScene = scriptData[currentId];
+                storyContainer.textContent = currentScene.story || "";
+                scrollArea.scrollTop = scrollArea.scrollHeight;
+                
+                if (currentScene.choices) {
+                    showChoices(currentScene.choices);
+                } else {
+                    startPromptPhase();
+                }
+                
+                lockClick = true;
+                setTimeout(() => { lockClick = false; }, 300);
+                
+            } else if (currentPhase === 'PROMPT_TYPING') {
+                clearTimeout(typingTimeout);
+                clearTimeout(promptDelayTimeout);
+                
+                promptBox.style.opacity = '1';
+                promptBox.style.transform = 'translateY(0)';
+                promptText.textContent = scriptData[currentId].prompt || "";
+                
+                finishPhase();
+                lockClick = true;
+                setTimeout(() => { lockClick = false; }, 300);
+                
+            } else if (currentPhase === 'DONE') {
+                if (scriptData[currentId].next) {
+                    currentId = scriptData[currentId].next;
+                    loadScene();
+                } else {
+                    showEndingScreen();
+                }
+            }
+        }
+
+        const gameScreen = document.getElementById('game-screen');
+        gameScreen.addEventListener('click', handleGlobalClick);
+    </script>
+</body>
+</html>
