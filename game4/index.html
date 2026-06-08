@@ -2,7 +2,10 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<!-- 增加 WebApp 全屏沉浸式 Meta 标签 -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>永恒的执念</title>
 <style>
         /* ================= 核心流光色彩体系 ================= */
@@ -15,16 +18,26 @@
             --font-serif: "Noto Serif SC", "Songti SC", "SimSun", "STKaiti", serif;
         }
 
-        /* 动态呼吸流光背景 */
-        body {
+        /* 动态呼吸流光背景 & 移动端锁死视口防回弹 */
+        html, body {
             margin: 0; padding: 0;
+            width: 100%; height: 100%;
+            position: fixed; /* 彻底解决手机端 100vh 被地址栏遮挡的问题 */
+            top: 0; left: 0;
+            overflow: hidden; /* 防止橡皮筋拉伸回弹 */
+            overscroll-behavior: none; 
+            touch-action: none; /* 禁用全局默认手势，内部滚动区单独开放 */
+            -webkit-touch-callout: none; /* 禁用长按菜单 */
+            user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
             background: linear-gradient(120deg, #090204 0%, #17050e 25%, #05060d 50%, #120206 75%, #050207 100%);
             background-size: 400% 400%;
             animation: liveShadows 25s ease infinite alternate;
             color: var(--text-story); font-family: var(--font-serif);
-            height: 100vh; width: 100vw; overflow: hidden;
-            user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
         }
+        
         @keyframes liveShadows {
             0% { background-position: 0% 50%; }
             50% { background-position: 100% 50%; }
@@ -56,7 +69,7 @@
 
         /* 哥特式全局外框 */
         .global-frame {
-            position: fixed; inset: clamp(10px, 2.5vw, 15px);
+            position: absolute; inset: clamp(8px, 2.5vw, 15px);
             border: 1px solid rgba(196, 18, 48, 0.1); pointer-events: none; z-index: 100;
             box-shadow: inset 0 0 50px rgba(0,0,0,0.8), 0 0 20px rgba(0,0,0,0.9);
         }
@@ -71,7 +84,7 @@
 
         /* ================= 屏幕切换 ================= */
         .screen {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            position: absolute; inset: 0;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             opacity: 0; visibility: hidden; transition: opacity 1.5s cubic-bezier(0.4, 0, 0.2, 1), visibility 1.5s; z-index: 10;
         }
@@ -81,10 +94,10 @@
         #start-screen { background: radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.9) 100%); }
         .title-container { z-index: 2; text-align: center; position: relative; width: 100%; padding: 0 20px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; }
         .title-cn {
-            font-size: clamp(2.2rem, 10vw, 4.5rem); 
-            letter-spacing: clamp(10px, 4vw, 18px); 
-            text-indent: clamp(10px, 4vw, 18px);
-            white-space: nowrap; /* 强制不换行 */
+            font-size: clamp(2rem, 8vw, 4.5rem); 
+            letter-spacing: clamp(6px, 3vw, 18px); 
+            text-indent: clamp(6px, 3vw, 18px);
+            white-space: nowrap; 
             font-weight: 300; margin-bottom: 15px; color: #fff; pointer-events: none;
             text-shadow: 0 0 15px rgba(196,18,48,0.8), 2px 2px 25px var(--accent-purple), 0 0 40px rgba(255,255,255,0.3);
             animation: ghostlyTitle 4s ease-in-out infinite alternate;
@@ -93,140 +106,79 @@
         
         .title-divider {
             color: var(--text-prompt);
-            font-size: 0.85rem;
-            letter-spacing: 10px;
+            font-size: clamp(0.75rem, 3vw, 0.85rem);
+            letter-spacing: clamp(4px, 2vw, 10px);
             margin-bottom: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0.7;
-            white-space: nowrap; /* 强制不换行 */
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0.7; white-space: nowrap; 
             text-shadow: 0 0 8px var(--accent-blood);
         }
         .title-divider::before, .title-divider::after {
-            content: '';
-            width: clamp(30px, 10vw, 50px);
-            height: 1px;
+            content: ''; width: clamp(20px, 8vw, 50px); height: 1px;
             background: linear-gradient(90deg, transparent, var(--accent-blood), transparent);
-            margin: 0 15px;
+            margin: 0 10px;
         }
 
         .password-box {
             background: radial-gradient(circle at top, rgba(40, 10, 20, 0.3) 0%, rgba(10, 2, 5, 0.1) 100%);
             border-top: 1px solid rgba(196, 18, 48, 0.3);
             border-bottom: 1px solid rgba(196, 18, 48, 0.3);
-            padding: 30px 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 18px;
-            pointer-events: auto;
-            position: relative;
-            width: 100%;
-            max-width: 360px;
+            padding: 30px 20px; display: flex; flex-direction: column; align-items: center;
+            gap: 18px; pointer-events: auto; position: relative; width: 100%; max-width: 320px;
         }
-        .password-box::before {
-            content: '✦'; position: absolute; top: -7px; left: 50%; transform: translateX(-50%);
-            color: var(--accent-blood); font-size: 10px;
-        }
-        .password-box::after {
-            content: '✦'; position: absolute; bottom: -7px; left: 50%; transform: translateX(-50%);
-            color: var(--accent-blood); font-size: 10px;
-        }
+        .password-box::before { content: '✦'; position: absolute; top: -7px; left: 50%; transform: translateX(-50%); color: var(--accent-blood); font-size: 10px; }
+        .password-box::after { content: '✦'; position: absolute; bottom: -7px; left: 50%; transform: translateX(-50%); color: var(--accent-blood); font-size: 10px; }
 
         #secret-key {
-            background: rgba(10, 2, 5, 0.6);
-            border: 1px solid rgba(196, 18, 48, 0.4);
-            border-radius: 2px;
-            color: var(--text-prompt);
-            padding: 12px 20px;
-            font-size: 0.95rem;
-            text-align: center;
-            outline: none;
-            font-family: var(--font-serif);
-            box-shadow: inset 0 0 15px rgba(0,0,0,0.8);
-            transition: all 0.4s ease;
-            letter-spacing: 3px;
-            width: 220px;
-            box-sizing: border-box;
+            background: rgba(10, 2, 5, 0.6); border: 1px solid rgba(196, 18, 48, 0.4);
+            border-radius: 2px; color: var(--text-prompt); padding: 12px 20px;
+            font-size: 0.95rem; text-align: center; outline: none; font-family: var(--font-serif);
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.8); transition: all 0.4s ease;
+            letter-spacing: 3px; width: 100%; box-sizing: border-box;
         }
-        #secret-key::placeholder {
-            color: rgba(240, 168, 185, 0.3);
-            letter-spacing: 2px;
-            font-size: 0.85rem;
-        }
-        #secret-key:focus {
-            border-color: var(--accent-blood);
-            box-shadow: 0 0 20px rgba(196, 18, 48, 0.5), inset 0 0 10px rgba(196, 18, 48, 0.2);
-            background: rgba(30, 5, 12, 0.8);
-        }
+        #secret-key::placeholder { color: rgba(240, 168, 185, 0.3); letter-spacing: 2px; font-size: 0.85rem; }
+        #secret-key:focus { border-color: var(--accent-blood); box-shadow: 0 0 20px rgba(196, 18, 48, 0.5), inset 0 0 10px rgba(196, 18, 48, 0.2); background: rgba(30, 5, 12, 0.8); }
+        
         #unlock-btn {
-            background: transparent;
-            border: 1px solid rgba(196, 18, 48, 0.5);
-            color: var(--text-prompt);
-            padding: 12px 40px;
-            font-size: 0.9rem;
-            cursor: pointer;
-            font-family: var(--font-serif);
-            letter-spacing: 8px;
-            text-indent: 8px;
-            transition: all 0.4s ease;
-            position: relative;
-            overflow: hidden;
-            border-radius: 2px;
-            white-space: nowrap;
+            background: transparent; border: 1px solid rgba(196, 18, 48, 0.5);
+            color: var(--text-prompt); padding: 12px 40px; font-size: 0.9rem;
+            cursor: pointer; font-family: var(--font-serif); letter-spacing: 8px; text-indent: 8px;
+            transition: all 0.4s ease; position: relative; overflow: hidden; border-radius: 2px; white-space: nowrap;
         }
-        #unlock-btn::before { 
-            content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; 
-            background: linear-gradient(90deg, transparent, rgba(196, 18, 48, 0.3), transparent); 
-            transition: left 0.6s ease; 
-        }
-        #unlock-btn:hover::before { left: 100%; }
-        #unlock-btn:hover {
-            border-color: #ff2a4b; color: #fff;
-            box-shadow: 0 0 20px rgba(196, 18, 48, 0.6), inset 0 0 10px rgba(196, 18, 48, 0.2);
-            text-shadow: 0 0 5px #fff;
-        }
-        #error-msg {
-            color: #ff2a4b;
-            font-size: 0.8rem;
-            letter-spacing: 2px;
-            height: 20px;
-            opacity: 0;
-            transition: opacity 0.3s;
-            text-shadow: 0 0 10px rgba(196,18,48,0.8);
-            margin-bottom: -10px;
-            white-space: nowrap;
-        }
-        @keyframes pwdShake {
-            0%, 100% { transform: translateX(0); }
-            20%, 60% { transform: translateX(-6px); }
-            40%, 80% { transform: translateX(6px); }
-        }
+        #unlock-btn::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(196, 18, 48, 0.3), transparent); transition: left 0.6s ease; }
+        #unlock-btn:hover::before, #unlock-btn:active::before { left: 100%; }
+        #unlock-btn:hover, #unlock-btn:active { border-color: #ff2a4b; color: #fff; box-shadow: 0 0 20px rgba(196, 18, 48, 0.6), inset 0 0 10px rgba(196, 18, 48, 0.2); text-shadow: 0 0 5px #fff; }
+        
+        #error-msg { color: #ff2a4b; font-size: 0.8rem; letter-spacing: 2px; height: 20px; opacity: 0; transition: opacity 0.3s; text-shadow: 0 0 10px rgba(196,18,48,0.8); margin-bottom: -10px; white-space: nowrap; }
+        @keyframes pwdShake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
         .shake-anim { animation: pwdShake 0.4s ease-in-out; }
 
         /* ================= 游戏本体 ================= */
-        #game-screen { padding: clamp(2vh, 3vh, 20px) clamp(4vw, 5vw, 20px); box-sizing: border-box; justify-content: center; } 
+        #game-screen { 
+            padding: clamp(20px, 4vh, 40px) clamp(15px, 4vw, 30px); 
+            box-sizing: border-box; 
+        } 
         
         #game-container { 
             width: 100%; max-width: 650px; height: 100%; 
-            display: flex; flex-direction: column; justify-content: center; 
-            position: relative; z-index: 2; padding-bottom: 25px; 
+            display: flex; flex-direction: column; 
+            position: relative; z-index: 2; padding-bottom: 15px; 
         }
 
-        /* 剧情区：增加了华丽的上下装饰线 */
+        /* 剧情区：动态伸缩高度，完美适应手机 */
         #story-frame {
-            position: relative; flex: 0 1 auto; max-height: 80vh; margin-bottom: 12px;
+            position: relative; 
+            flex: 1 1 0; /* 允许弹性压缩，确保底部选项不溢出屏幕 */
+            min-height: 0; /* 关键：解决 Flex 溢出核心属性 */
+            margin-bottom: 12px;
             background: radial-gradient(circle at top, rgba(40, 10, 20, 0.65) 0%, rgba(10, 2, 5, 0.85) 80%);
             border: 1px solid rgba(196, 18, 48, 0.15); border-radius: 2px;
             box-shadow: 0 15px 45px rgba(0,0,0,0.95), inset 0 0 40px rgba(196, 18, 48, 0.08);
             display: flex; flex-direction: column; overflow: hidden;
         }
+        
         /* 顶部与底部血色仪式线 */
-        .frame-ornament {
-            position: absolute; left: 50%; transform: translateX(-50%); width: 80%; height: 12px;
-            display: flex; align-items: center; justify-content: center; opacity: 0.7; z-index: 3; pointer-events: none;
-        }
+        .frame-ornament { position: absolute; left: 50%; transform: translateX(-50%); width: 80%; height: 12px; display: flex; align-items: center; justify-content: center; opacity: 0.7; z-index: 3; pointer-events: none; }
         .fo-top { top: 0; } .fo-bottom { bottom: 0; }
         .frame-ornament::before, .frame-ornament::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--accent-blood), transparent); }
         .frame-ornament .fo-star { color: var(--text-prompt); font-size: 10px; margin: 0 15px; text-shadow: 0 0 8px var(--accent-blood); animation: breath 3s infinite; }
@@ -242,15 +194,18 @@
         .sfc-tl::after { top: 2px; left: 2px; } .sfc-tr::after { top: 2px; right: 2px; }
         .sfc-bl::after { bottom: 2px; left: 2px; } .sfc-br::after { bottom: 2px; right: 2px; }
 
+        /* 内部滚动区解开触控限制 */
         #story-scroll-area {
-            overflow-y: auto; padding: 28px 22px; position: relative; z-index: 1;
+            flex: 1; overflow-y: auto; padding: 25px 20px; position: relative; z-index: 1;
             scrollbar-width: none; -ms-overflow-style: none; display: block; 
+            touch-action: pan-y; /* 仅允许纵向原生滑动 */
+            -webkit-overflow-scrolling: touch; /* 保证 iOS 丝滑滚动 */
         }
         #story-scroll-area::-webkit-scrollbar { display: none; }
         
         #story-text { 
-            font-size: clamp(0.85rem, 3.8vw, 1.0rem); 
-            line-height: 1.6; letter-spacing: 1.5px; 
+            font-size: clamp(0.9rem, 4vw, 1.05rem); 
+            line-height: 1.7; letter-spacing: 1.5px; 
             color: var(--text-story); text-align: justify; 
             white-space: pre-wrap; padding-bottom: 5px; margin: 0;
             text-shadow: 0 1px 4px rgba(0,0,0,0.9); 
@@ -261,68 +216,67 @@
             flex-shrink: 0; background: linear-gradient(135deg, rgba(20, 5, 10, 0.9), rgba(40, 8, 15, 0.85), rgba(20, 5, 10, 0.9));
             border: 1px solid rgba(196, 18, 48, 0.2); 
             border-top: 2px solid var(--accent-blood); border-bottom: 2px solid #5a0a18;
-            padding: 15px 20px; border-radius: 2px; opacity: 0; transform: translateY(10px); transition: opacity 1.5s ease, transform 1.5s ease;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.85), inset 0 0 25px rgba(196, 18, 48, 0.1); position: relative; min-height: 60px;
+            padding: 12px 15px; border-radius: 2px; opacity: 0; transform: translateY(10px); transition: opacity 1.5s ease, transform 1.5s ease;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.85), inset 0 0 25px rgba(196, 18, 48, 0.1); position: relative;
         }
-        .prompt-label { font-size: 0.8rem; color: #fff; letter-spacing: 4px; margin-bottom: 10px; font-weight: bold; display: flex; align-items: center; justify-content: center; text-shadow: 0 0 10px var(--accent-blood), 0 0 20px var(--accent-purple); }
+        .prompt-label { font-size: 0.75rem; color: #fff; letter-spacing: 4px; margin-bottom: 8px; font-weight: bold; display: flex; align-items: center; justify-content: center; text-shadow: 0 0 10px var(--accent-blood), 0 0 20px var(--accent-purple); }
         .prompt-label::before, .prompt-label::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, transparent, rgba(240, 168, 185, 0.4), transparent); margin: 0 12px; }
-        #prompt-text { color: #d6bpc4; font-size: clamp(0.85rem, 3.6vw, 0.95rem); line-height: 1.55; margin: 0; font-style: italic; letter-spacing: 0.8px; text-shadow: 0 1px 3px rgba(0,0,0,1); text-align: justify; }
+        #prompt-text { color: #d6bpc4; font-size: clamp(0.85rem, 3.8vw, 0.95rem); line-height: 1.55; margin: 0; font-style: italic; letter-spacing: 0.8px; text-shadow: 0 1px 3px rgba(0,0,0,1); text-align: justify; }
 
-        /* 分支选项框：增加流光与猩红前缀 */
+        /* 分支选项框 */
         #choices-container {
-            flex-shrink: 0; display: flex; flex-direction: column; gap: 12px; 
+            flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; 
             opacity: 0; visibility: hidden; transition: opacity 1s ease;
             position: relative; width: 100%; z-index: 10;
         }
-        #choices-container.active { opacity: 1; visibility: visible; margin-top: 18px; }
+        #choices-container.active { opacity: 1; visibility: visible; margin-top: 15px; }
         
         .choice-btn {
             background: linear-gradient(90deg, rgba(30, 5, 12, 0.9) 0%, rgba(15, 3, 6, 0.8) 100%);
-            border: 1px solid rgba(196, 18, 48, 0.3);
-            border-left: 4px solid var(--accent-blood);
-            color: var(--text-prompt); padding: 15px 20px; font-family: var(--font-serif); font-size: clamp(0.9rem, 3.8vw, 1.05rem);
-            cursor: pointer; text-align: left; border-radius: 2px; transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            border: 1px solid rgba(196, 18, 48, 0.3); border-left: 4px solid var(--accent-blood);
+            color: var(--text-prompt); padding: 12px 15px; font-family: var(--font-serif); font-size: clamp(0.9rem, 3.8vw, 1.05rem);
+            cursor: pointer; text-align: left; border-radius: 2px; transition: all 0.3s ease;
             box-shadow: 0 8px 20px rgba(0,0,0,0.6), inset 0 0 10px rgba(196,18,48,0.05);
-            letter-spacing: 1.5px; line-height: 1.45; position: relative; overflow: hidden;
+            letter-spacing: 1.2px; line-height: 1.4; position: relative; overflow: hidden;
+            /* 解决移动端点击闪烁问题 */
+            -webkit-tap-highlight-color: transparent; outline: none;
         }
-        /* 按钮扫光特效 */
+        
         .choice-btn::before {
             content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%;
             background: linear-gradient(90deg, transparent, rgba(240, 168, 185, 0.1), transparent);
-            transform: skewX(-20deg); transition: left 0.6s ease;
+            transform: skewX(-20deg); transition: left 0.5s ease;
         }
         .choice-btn:hover::before, .choice-btn:active::before { left: 150%; }
-        
         .choice-btn:hover, .choice-btn:active {
             background: linear-gradient(90deg, rgba(50, 8, 18, 0.95) 0%, rgba(20, 4, 8, 0.85) 100%);
             border-color: #ff2a4b; color: #fff; border-left-width: 6px;
             box-shadow: 0 0 25px rgba(196, 18, 48, 0.6), inset 0 0 20px rgba(196, 18, 48, 0.2);
-            transform: translateX(8px) scale(1.01); text-shadow: 0 0 8px rgba(255,255,255,0.5);
+            transform: scale(0.99); text-shadow: 0 0 8px rgba(255,255,255,0.5);
         }
 
         #click-hint { 
-            position: absolute; bottom: 0px; left: 0; width: 100%; 
+            position: absolute; bottom: 0; left: 0; width: 100%; 
             text-align: center; font-size: 0.75rem; color: rgba(200, 180, 190, 0.4); 
-            letter-spacing: 8px; opacity: 0; transition: opacity 1s; 
-            text-transform: uppercase;
-            white-space: nowrap;
+            letter-spacing: 6px; opacity: 0; transition: opacity 1s; 
+            text-transform: uppercase; white-space: nowrap; pointer-events: none;
         }
 
         /* ================= 结局页 ================= */
         #ending-screen { background: radial-gradient(circle at center, rgba(35, 5, 12, 0.9) 0%, #030001 100%); }
         .end-content { z-index: 2; text-align: center; display: flex; flex-direction: column; align-items: center; padding: 20px; width: 100%; box-sizing: border-box; }
-        .end-cn { font-size: clamp(1.5rem, 6.5vw, 3rem); color: #ff2a4b; white-space: nowrap; letter-spacing: clamp(6px, 3.5vw, 15px); text-indent: clamp(6px, 3.5vw, 15px); margin-bottom: 20px; opacity: 0; font-weight: 300; text-shadow: 0 0 20px rgba(255,42,75,0.5), 0 0 40px var(--accent-purple); }
+        .end-cn { font-size: clamp(1.5rem, 6vw, 3rem); color: #ff2a4b; white-space: nowrap; letter-spacing: clamp(4px, 3vw, 15px); text-indent: clamp(4px, 3vw, 15px); margin-bottom: 20px; opacity: 0; font-weight: 300; text-shadow: 0 0 20px rgba(255,42,75,0.5), 0 0 40px var(--accent-purple); }
         .end-divider { width: 1px; height: 50px; background: linear-gradient(to bottom, transparent, rgba(255, 42, 75, 0.8), transparent); margin: 0 auto 20px auto; opacity: 0; box-shadow: 0 0 10px #ff2a4b; }
-        .end-sub { font-size: clamp(0.9rem, 4vw, 1.1rem); color: #d6bpc4; white-space: nowrap; letter-spacing: clamp(5px, 2.5vw, 18px); text-indent: clamp(5px, 2.5vw, 18px); margin-bottom: 60px; opacity: 0; text-shadow: 0 0 8px rgba(255,255,255,0.3); }
+        .end-sub { font-size: clamp(0.9rem, 4vw, 1.1rem); color: #d6bpc4; white-space: nowrap; letter-spacing: clamp(4px, 2vw, 18px); text-indent: clamp(4px, 2vw, 18px); margin-bottom: 60px; opacity: 0; text-shadow: 0 0 8px rgba(255,255,255,0.3); }
         
         #restart-btn { 
-            padding: 12px 45px; font-size: 0.9rem; background: transparent; border: 1px solid rgba(196, 18, 48, 0.4); 
-            color: rgba(232, 224, 227, 0.7); border-radius: 2px; cursor: pointer; letter-spacing: 10px; text-indent: 10px; 
-            opacity: 0; font-family: var(--font-serif); transition: all 0.5s ease; position: relative; overflow: hidden; white-space: nowrap; 
+            padding: 12px 35px; font-size: 0.9rem; background: transparent; border: 1px solid rgba(196, 18, 48, 0.4); 
+            color: rgba(232, 224, 227, 0.7); border-radius: 2px; cursor: pointer; letter-spacing: 8px; text-indent: 8px; 
+            opacity: 0; font-family: var(--font-serif); transition: all 0.4s ease; position: relative; overflow: hidden; white-space: nowrap; 
         }
         #restart-btn::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(196, 18, 48, 0.3), transparent); transition: left 0.6s ease; }
-        #restart-btn:hover::before { left: 100%; }
-        #restart-btn:hover { border-color: #ff2a4b; color: #fff; box-shadow: 0 0 25px rgba(196, 18, 48, 0.7), inset 0 0 15px rgba(196, 18, 48, 0.4); text-shadow: 0 0 5px #fff; }
+        #restart-btn:hover::before, #restart-btn:active::before { left: 100%; }
+        #restart-btn:hover, #restart-btn:active { border-color: #ff2a4b; color: #fff; box-shadow: 0 0 25px rgba(196, 18, 48, 0.7), inset 0 0 15px rgba(196, 18, 48, 0.4); text-shadow: 0 0 5px #fff; }
 
         /* ================= 动画 ================= */
         @keyframes breath { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; filter: brightness(1.2); } }
@@ -331,34 +285,39 @@
 </head>
 <body>
 
+    <!-- 背景特效群 -->
     <div class="bg-mandala"></div>
     <div class="particles"></div>
-    <div class="bg-pattern"></div>
     
+    <!-- 全局复古外框 -->
     <div class="global-frame">
         <div class="g-node gn-tl"></div><div class="g-node gn-tr"></div>
         <div class="g-node gn-bl"></div><div class="g-node gn-br"></div>
     </div>
 
+    <!-- 开始页（包含密码系统） -->
     <div id="start-screen" class="screen active">
         <div class="title-container">
             <div class="title-cn">永恒的执念</div>
             <div class="title-divider">✦ 要爱我，像以前那样 ✦</div>
             <div class="password-box" id="pwd-box">
                 <input type="password" id="secret-key" placeholder="输入契约密钥..." autocomplete="off">
-                <button id="unlock-btn" onclick="checkPassword(event)">解除封印</button>
+                <button id="unlock-btn" onclick="checkPassword(event)" ontouchstart="checkPassword(event)">解除封印</button>
                 <div id="error-msg"></div>
             </div>
         </div>
     </div>
 
+    <!-- 游戏本体 -->
     <div id="game-screen" class="screen">
         <div id="game-container">
             
             <div id="story-frame">
+                <!-- 哥特边角装饰 -->
                 <div class="sf-corner sfc-tl"></div><div class="sf-corner sfc-tr"></div>
                 <div class="sf-corner sfc-bl"></div><div class="sf-corner sfc-br"></div>
                 
+                <!-- 上下仪式感线条 -->
                 <div class="frame-ornament fo-top"><div class="fo-star">✦</div></div>
                 
                 <div id="story-scroll-area">
@@ -378,11 +337,12 @@
         </div>
     </div>
 
+    <!-- 结局界面 -->
     <div id="ending-screen" class="screen">
         <div class="end-content">
             <div class="end-cn" id="end-cn">我们要永远在一起</div>
             <div class="end-divider" id="end-divider"></div>
-            <div class="end-sub" id="end-sub">我爱你，我们不要再分开</div>
+            <div class="end-sub" id="end-sub">我爱你，一直都是</div>
             <button id="restart-btn" onclick="restartGame(event)" ontouchstart="restartGame(event)">重回梦魇</button>
         </div>
     </div>
@@ -417,18 +377,18 @@
             "s5": {
                 story: "早高峰的地铁车厢里充斥着沉闷的空气和各种交织的体味，人贴着人，拥挤得几乎没有任何转身的余地。你一路都在神经质地回头，试图在这茫茫人海中彻底甩掉他。你甚至在门关上的最后一秒才惊险地挤进车厢，以为只要身处在人群中间，自己就安全了。\n\n然而，当你刚想扶稳栏杆喘口气，一具熟悉的、带着一丝冷气的胸膛，便从身后贴了上来。周围的乘客似乎完全没有察觉到他的存在。\n\n“跑什么？小主人，你不会是想甩掉我吧？”低沉的嗓音紧贴着耳膜响起，激起你起了一身的鸡皮疙瘩。\n\n你惊恐地想要转身推开他，但一股不可名状的冰冷与滚烫交织的实质触感，无视了所有物理定律，甚至穿透了职业装的布料，从身后强行进入了你的体内。你惊骇得地瞪大双眼，瞳孔骤缩。所有的抗拒在那足以毁灭理智的快感面前摇摇欲坠。在这拥挤到令人窒息的车厢里，你.....",
                 choices: [
-                    { text: "✦ 咬紧牙关，在拥挤的人潮中保持正常不叫出声", next: "s5a" },
+                    { text: "✦ 咬紧牙关，在拥挤的人潮中保持正常", next: "s5a" },
                     { text: "✦ 放弃尊严，用轻微的动作配合他", next: "s5b" }
                 ]
             },
             "s5a": {
                 story: "你咬破了嘴唇，努力忍住这过量的快感，向着车厢另一端挤去想着甩开他。然而早高峰的人潮犹如一堵密不透风的墙，将你死死困在原地。每当你艰难地挪动一寸，体内那股冰冷而又充满倒刺般的实质触感就会因为拉扯而更加深入地插进穴里。\n\n他没有再出声威胁，只是那双冰凉的手臂不容拒绝的环过你的腰肢。当列车刹车时，他在人群的推搡中，借势向前重重一挺。\n\n肉棒顶到宫口的瞬间，你已经将理智抛弃。眼前炸开一片白光，身体在周围西装革履的上班族中间，不受控制地痉挛起来。泪水夺眶而出，你只能将脸低下去，强忍着不让自己发出带着泣音的娇喘。你终于明白，在这个怪物面前，你似乎没办法把他甩掉。",
-                prompt: "手指深入最底端。不许发出任何声音，体会那种在密闭、拥挤的公共空间里，为了掩饰失控的呜咽而强忍痛楚与快感，在最深处用手指勾弄G点，直到快要濒临高潮。",
+                prompt: "手指深入最底端。不许发出任何声音，体会那种在密闭、拥挤的公共空间里强忍痛楚与快感，在最深处用手指勾弄G点，直到濒临高潮。",
                 next: "s6"
             },
             "s5b": {
                 story: "理智与尊严在快感面前显得很好选择。你像是被抽干了最后一丝力气，双腿一软，彻底放弃了支撑，塌下腰对着他暗示地晃了晃。\n\n他像安抚一只受惊的幼鸟般，宽大的手掌轻轻顺着你的脊背抚摸。然而，他身下的动作却并不温柔，下半身的动作愈发深入、缓慢的抽送。你被裹在他的阴影里，在周围嘈杂的报站声中，被迫承受着这种隐秘的侵犯。你的甬道因为极度的羞耻而绞得死紧，隐秘的羞耻让你脸上的表情有些扭曲，只能微微张口喘息，祈祷着自己的表情不会被别人发现。",
-                prompt: "放松双腿，手指配合着缓慢的呼吸，进行抽插。另一只手隔着衣物，用掌根大力揉按阴蒂。接受这种在众目睽睽之下被隐秘侵犯的堕落与安全感交织的错觉，紧咬下唇拼命压抑变调的呼吸声。",
+                prompt: "放松双腿，手指配合着缓慢的呼吸，进行抽插。另一只手隔着衣物，用掌根大力揉按阴蒂。紧咬下唇拼命压抑变调的呼吸声。",
                 next: "s6"
             },
             "s6": {
@@ -439,8 +399,8 @@
             "s7": {
                 story: "等到了午休时间，偌大的办公区里只剩下零星的敲击键盘声和同事们伏案午睡的均匀呼吸声。你强忍着身体的不适，正准备趴下补个觉，双腿却突然被强行分开。他不知何时到了你的办公桌下。\n\n“这里不可以”你压低声音，想合拢双腿。\n\n然而他并没有听。温热湿滑的口腔毫无预兆地完全包裹住那颗战栗充血的阴蒂，两根带有薄茧的手指插入穴口。你来不及反抗就开始发抖。就在你几乎要失控出声时，隔壁工位的男同事突然站了起来，半个身子探过隔板凑向你：\n\n“上午那组核心数据你核对过了吗？”\n\n巨大的社会性死亡危机瞬间笼罩了你。在这个静谧的午休办公室，你....？",
                 choices: [
-                    { text: "✦ 仓皇掩饰，用颤抖的声音尽快打发他离开", next: "s7a" },
-                    { text: "✦ 死死咬住舌尖，强迫自己用正常语调说话", next: "s7b" }
+                    { text: "✦ 仓皇掩饰，用颤抖的声音打发他离开", next: "s7a" },
+                    { text: "✦ 死死咬住舌尖，用正常语调说话", next: "s7b" }
                 ]
             },
             "s7a": {
@@ -449,7 +409,7 @@
                 next: "s8"
             },
             "s7b": {
-                story: "极致的恐惧，让你不得不忍住。你深吸一口气，强行让自己看起来正常：“第三页的数据转化率有点异常，我已经批注了，你一会重新跑一遍模型……”\n\n就在你一本正经地布置工作时，桌下的他眼底闪过一丝醋意。灵活的舌尖重重舔舐在你的阴蒂上，手指向上顶弄。大脑几乎宕机，你在同事的目光中，一边逻辑清晰地探讨着枯燥的数据，一边在裙底一股股喷水，昂贵的椅垫被彻底浸透。刚才抵抗早被抛到九霄云外。。",
+                story: "极致的恐惧，让你不得不忍住。你深吸一口气，强行让自己看起来正常：“第三页的数据转化率有点异常，我已经批注了，你一会重新跑一遍模型……”\n\n就在你一本正经地布置工作时，桌下的他眼底闪过一丝醋意。灵活的舌尖重重舔舐在你的阴蒂上，手指向上顶弄。大脑几乎宕机，你在同事的目光中，一边逻辑清晰地探讨着枯燥的数据，一边在裙底一股股喷水，昂贵的椅垫被彻底浸透。刚才抵抗早被抛到九霄云外。",
                 prompt: "手指对阴蒂按压揉搓，同时另一只手在穴肉里向上方顶弄。把自己快速送上高潮。",
                 next: "s8"
             },
@@ -470,14 +430,14 @@
             },
             "s11": {
                 story: "电梯下行的短短十几秒里。他将你整个人翻转过去，按在冰冷光滑的镜壁上，撩起你的裙摆，直接用肉棒抽插。\n\n“把头抬起来，看看上面的监控。你现在的反应已经是离不开我了吧？”他捏住你的下巴，强迫你面对轿厢右上角闪烁的红灯。\n\n你被迫看着镜头，清晰地在对面的镜子里看到了自己现在的模样——衣衫凌乱，眼神迷离，主动迎合着他的撞击。这种即将身败名裂的刺激，彻底击碎了你脑海中所有关于“抗拒”的伪装。你没有推开他，反而地抬起一条腿，在封闭的轿厢里不管不顾地喘叫、不受控的滴水。在这一刻，你绝望地承认，自己已经彻底沦陷成了一个被他支配的玩物。",
-                prompt: "用三根手指进行毫无节制的抽插。另一只手五指张开，揉捏拉扯自己的乳肉。加快手指速度，每一次都要插到最深处。任由浪叫溢出，持续冲刺到高潮边缘，想象汁液喷溅的狂欢。",
+                prompt: "用三根手指进行毫无节制的抽插。另一只手五指张开，揉捏拉扯自己的乳肉。每一次都要插到最深处。想象汁液喷溅的狂欢。",
                 next: "s12"
             },
             "s12": {
                 story: "你带着被淫水泡透的内裤回了家，推开家门，房间里静悄悄的，没有开灯。他走上前来，将你抵在坚硬的门背上，单手挑开你真丝衬衫的前三颗纽扣，露出大片雪白的肌肤。\n\n“在外面不够爽吧？没关系，现在到家了。”他的声音在黑暗中回荡，指腹顺着你的脊椎缓慢抚摸，引起阵阵战栗。\n\n曾经试图将他赶走的念头早已灰飞烟灭，取而代之的是一种令人无法自拔的依赖。你心里比谁都清楚，接下来，这个偏执的恶魔绝对不会让你有哪怕一秒钟的时间双脚沾地。在这彻底跌入深渊的前夕，你....？",
                 choices: [
-                    { text: "欲火烧毁理智，主动脱下衣物将他推倒索求", next: "c3a" },
-                    { text: "抛弃尊严，像发情小狗一样摇尾乞怜", next: "c3b" }
+                    { text: "✦ 欲火烧毁理智，主动推倒他", next: "c3a" },
+                    { text: "✦ 抛弃尊严，像发情小狗一样摇尾乞怜", next: "c3b" }
                 ]
             },
             "c3a": {
@@ -487,22 +447,22 @@
             },
             "c3b": {
                 story: "最后一丝作为人类的羞耻心也荡然无存。你顺着门板软软地滑跪在地，双膝分开，像一只真正发情的母犬一般，将上半身伏低，高高撅起那泥泞不堪的臀部。声音甜腻、毫无底线地哀求着：\n\n“求你肏我……随便怎么弄坏我都可以……”\n\n你心甘情愿地将自己降格取悦他。他垂眸温柔地看着你，宽大冰冷的手掌抚上你的发顶：“真乖。既然这么想当我的小狗，那就得给你套上该有的项圈，让你明白自己到底该做什么。”",
-                prompt: "腰部塌下。将一根手指极浅地含在嘴里模拟讨好的舔舐，另一只手两根手指插入穴内进行缓慢但深入的抽送。完全失去了人类的尊严，变成一只只知道交配的宠物。",
+                prompt: "腰部塌下。将一根手指极浅地含在嘴里模拟讨好的舔舐，另一只手两根手指插入穴内进行缓慢但深入的抽送。变成一只只知道交配的宠物。",
                 next: "s13"
             },
             "s13": {
                 story: "他不知从哪里找来了一条柔韧的红丝带，将你的双手手腕死死绑在了床头栏杆上，双腿则被粗暴地大开，用领带固定在两侧的床柱上，彻底暴露出你已经滴水的小穴。你平时用来解决生理反应的震动棒被涂满了润滑液，毫不留情地推入到底，并直接开启了最高频率。\n\n“叫出声来，小主人。让我听听，你现在到底有多想要我。”\n\n经过今天在危险公共场合的极限拉扯，你认清了自己内心的真面目。曾经那个高傲、试图反抗的你已经死在了深渊里。面对他的逼迫，你不再想咬唇强忍，而是饥渴地挺起腰肢迎合着那根冰冷的玩具，扬起脖颈，任由甜腻淫荡的呻吟声脱口而出。满脑子只有如何让他更加粗暴地占有你的淫荡念头。",
-                prompt: "双腿尽最大幅度大开，毫无保留地暴露自己。用两根手指插入快速抽插，拇指在外侧不停刺激阴蒂。深刻感受那种被束缚却甘之如饴的堕落感。不再有任何心理负担，顺从地发出那种完全抛弃羞耻的娇喘声，持续刺激直到阴蒂充血肿胀。",
+                prompt: "双腿尽最大幅度大开，毫无保留地暴露自己。用两根手指插入快速抽插，拇指在外侧不停刺激阴蒂。深刻感受那种被束缚却甘之如饴的堕落感。顺从地发出娇喘声，持续刺激。",
                 next: "s14"
             },
             "s14": {
                 story: "听到你终于不再有丝毫刻意压抑，那甜腻的娇喘声回荡在卧室内，他漆黑的眼底瞬间闪过一丝满足与狂热。他一把抽出那根还在嗡嗡作响的玩具随意扔在地毯上，换上自己那根早已胀痛难忍、粗长滚烫的实体，没有任何前戏和缓冲，对准那张翕张流水的缝隙，直接插到宫口。\n\n“这就对了，小主人，你看你还是这么爱我这副身体。”\n\n被绑缚的身体被逼到高潮边缘。你扭动着腰肢，拼命收缩甬道去夹紧他，不知疲倦地迎合着他的撞击。失禁般的潮吹一次次发生，透明的体液如同喷泉般洒向半空，将整个床单彻底毁掉。你流着眼泪，毫无顾忌地大声浪叫着祈求他再深一点。在这张凌乱的床上享受着极致的堕落。",
-                prompt: "将手指增加到三根，每一次都插到最深处。另一只手快速地拨弄揉按阴蒂。放开腰部的限制，主动向上迎合。加快节奏，直到逼出那种大脑失控、宛如失禁般的潮吹。大声浪叫出声，享受放纵的高潮。",
+                prompt: "将手指增加到三根，每一次都插到最深处。另一只手快速地拨弄揉按阴蒂。放开腰部的限制，主动向上迎合。加快节奏，直到逼出大脑失控的潮吹。大声浪叫出声。",
                 next: "s15"
             },
             "s15": {
                 story: "此时的他完全褪去了那一层温柔的伪装，不知疲倦地挺腰抽插。那根粗长上翘的实体以极其凶狠的力道一下下重重凿击着你最脆弱的子宫口。你胸前饱满的乳肉随着撞击晃动，粉嫩的乳尖被他毫不留情地又咬又吸，留下触目惊心的深红色印记。\n\n“小主人，想高潮的话该说什么？”他为你顺着额前的碎发，停住了动作轻声问。\n\n被快感吊在半空的感觉并不好受。你哭喊着大声回答：“我...我爱你，我最爱你了，我不会再把你丢下了！”他听到答案后满意的继续整根抽插。最终的高潮被他强行锁死在顶点，那种大脑空白、灵魂战栗的感觉被生生延长了数分钟之久，你爽得眼眸失去焦距，意识几乎消失。",
-                prompt: "用三根手指深插到极点，每一次都要去勾深处最酸胀的部位。同时，另一只手用力捏揉、揪扯乳尖。加快抽送直到高潮也不可以停，抽出手指揉搓阴蒂让快感延长，直到双腿发颤手腕发酸。",
+                prompt: "用三根手指深插到极点，每一次都要去勾深处最酸胀的部位。同时，另一只手用力捏揉、揪扯乳尖。加快抽送直到高潮也不可以停，抽出手指揉搓阴蒂让快感延长。",
                 next: "s16"
             },
             "s16": {
@@ -511,7 +471,7 @@
                 next: "s20"
             },
             "s20": {
-                story: "夜阑人静，你在浴室里胡乱冲洗了一番后，拖着几乎散架的身体躺在被窝里。眼皮重得像灌了铅，刚准备陷入沉睡，他便从身后贴上来，用宽大的胸膛紧紧拥住你单薄的后背。。\n\n那根明明刚洗干净、甚至才宣泄过不久的实体，竟然不知何时又恢复了精神抖擞的状态，顶端流出的清液混合着残存的水汽，顺着你大腿根部的曲线，轻车熟路地滑进了那个依旧温暖湿润、甚至一直在隐隐抽动的缝隙里。“安心睡吧。”他在你耳畔落下轻柔的吻。\n\n如果是之前，你一定会惊恐地挣扎逃离。但现在，你早已在这一遍遍的做爱中彻底堕落。你甚至连眼睛都没睁开，只是凭借着本能，主动向后挺翘起臀部，贪婪地将他吃得更深。你的嘴里无意识地呢喃着几句听不清的娇嗔，双手拉过他的手臂环住自己的腰，安然地享受着这份只属于你们两个的亲密。",
+                story: "夜阑人静，你在浴室里胡乱冲洗了一番后，拖着几乎散架的身体躺在被窝里。眼皮重得像灌了铅，刚准备陷入沉睡，他便从身后贴上来，用宽大的胸膛紧紧拥住你单薄的后背。\n\n那根明明刚洗干净、甚至才宣泄过不久的实体，竟然不知何时又恢复了精神抖擞的状态，顶端流出的清液混合着残存的水汽，顺着你大腿根部的曲线，轻车熟路地滑进了那个依旧温暖湿润、甚至一直在隐隐抽动的缝隙里。“安心睡吧。”他在你耳畔落下轻柔的吻。\n\n如果是之前，你一定会惊恐地挣扎逃离。但现在，你早已在这一遍遍的做爱中彻底堕落。你甚至连眼睛都没睁开，只是凭借着本能，主动向后挺翘起臀部，贪婪地将他吃得更深。你的嘴里无意识地呢喃着几句听不清的娇嗔，双手拉过他的手臂环住自己的腰，安然地享受着这份只属于你们两个的亲密。",
                 prompt: "从后方的角度插入手指。无需剧烈运动，只需主动、缓慢的扭动腰肢，向后方迎合。",
                 next: "s21"
             },
@@ -543,28 +503,28 @@
 
         // ================= 密码验证逻辑 =================
         function checkPassword(event) {
-            if (event) event.stopPropagation();
+            if (event) { event.preventDefault(); event.stopPropagation(); }
             const inputVal = document.getElementById('secret-key').value;
             const errorMsg = document.getElementById('error-msg');
             const pwdBox = document.getElementById('pwd-box');
 
             if (inputVal === 'maru1847') {
                 errorMsg.style.opacity = '0';
+                document.getElementById('secret-key').blur(); // 隐藏键盘
                 startGame();
             } else {
                 errorMsg.textContent = '契约密钥错误，封印无法解除';
                 errorMsg.style.opacity = '1';
                 
-                // 触发震动动效
                 pwdBox.classList.remove('shake-anim');
-                void pwdBox.offsetWidth; // 重置动画
+                void pwdBox.offsetWidth; 
                 pwdBox.classList.add('shake-anim');
             }
         }
 
-        // 支持回车键提交密码
         document.getElementById('secret-key').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') {
+                e.preventDefault();
                 checkPassword();
             }
         });
@@ -626,11 +586,19 @@
                 
                 for (let i = 0; i < currentScene.choices.length; i++) {
                     const choice = currentScene.choices[i];
-                    const btn = document.createElement('div');
+                    const btn = document.createElement('button');
                     btn.className = 'choice-btn';
                     btn.textContent = choice.text;
-                    btn.onclick = (e) => makeChoice(choice.next, e);
-                    btn.ontouchstart = (e) => makeChoice(choice.next, e);
+                    
+                    // 支持触摸与点击，防止点击穿透
+                    const tapHandler = (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        makeChoice(choice.next);
+                    };
+                    btn.addEventListener('click', tapHandler);
+                    btn.addEventListener('touchend', tapHandler);
+                    
                     choicesContainer.appendChild(btn);
                 }
             } else {
@@ -642,7 +610,7 @@
             typeWriter(currentScene.story, 0, storyContainer, 25, () => {
                 if (currentPhase === 'STORY_TYPING') {
                     if (currentScene.choices) {
-                        showChoices(currentScene.choices);
+                        showChoices();
                     } else {
                         startPromptPhase();
                     }
@@ -650,15 +618,18 @@
             });
         }
 
-        function showChoices(choices) {
+        function showChoices() {
             currentPhase = 'WAITING_FOR_CHOICE';
             choicesContainer.classList.add('active');
             clickHint.style.opacity = '0'; 
-            scrollArea.scrollTop = scrollArea.scrollHeight;
+            
+            // 等待 DOM 渲染后滚动到底部
+            setTimeout(() => {
+                scrollArea.scrollTop = scrollArea.scrollHeight;
+            }, 50);
         }
 
-        function makeChoice(nextId, event) {
-            if (event) event.stopPropagation(); 
+        function makeChoice(nextId) {
             if (lockClick) return;
             lockClick = true;
             
@@ -695,7 +666,7 @@
                 let interval = setInterval(() => {
                     let finished = 0; let displayString = '';
                     for (let i = 0; i < length; i++) {
-                        if (finalText[i] === ' ' || finalText[i] === '·') { displayString += finalText[i]; finished++; continue; }
+                        if (finalText[i] === ' ' || finalText[i] === '·' || finalText[i] === '，') { displayString += finalText[i]; finished++; continue; }
                         let threshold = i * 4; 
                         if (frame >= threshold + 10) { displayString += finalText[i]; finished++; } 
                         else { displayString += chars[Math.floor(Math.random() * chars.length)]; }
@@ -721,13 +692,16 @@
         }
 
         function restartGame(event) {
-            if(event) event.stopPropagation(); 
+            if(event) { event.preventDefault(); event.stopPropagation(); }
             location.reload(); 
         }
 
         function handleGlobalClick(event) {
             if (lockClick) return; 
             if (currentPhase === 'WAITING_FOR_CHOICE') return; 
+
+            // 过滤掉对于内部滚动条的点击误触
+            if (event.target.closest('#choices-container')) return;
 
             if (currentPhase === 'STORY_TYPING') {
                 clearTimeout(typingTimeout);
@@ -736,7 +710,7 @@
                 scrollArea.scrollTop = scrollArea.scrollHeight;
                 
                 if (currentScene.choices) {
-                    showChoices(currentScene.choices);
+                    showChoices();
                 } else {
                     startPromptPhase();
                 }
@@ -766,6 +740,7 @@
             }
         }
 
+        // 绑定全局点击与触摸事件推进剧情
         const gameScreen = document.getElementById('game-screen');
         gameScreen.addEventListener('click', handleGlobalClick);
     </script>
