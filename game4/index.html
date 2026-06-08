@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>永恒的执念</title>
-    <style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>永恒的执念</title>
+<style>
         /* ================= 核心流光色彩体系 ================= */
         :root {
-            --text-story: #e8e0e3; 
-            --text-prompt: #f0a8b9; 
+            --text-story: #e8e0e3;
+            --text-prompt: #f0a8b9;
             --text-muted: rgba(200, 180, 190, 0.5);
             --accent-blood: #c41230;
             --accent-purple: #5c1b54;
@@ -20,12 +20,12 @@
             margin: 0; padding: 0;
             background: linear-gradient(120deg, #090204 0%, #17050e 25%, #05060d 50%, #120206 75%, #050207 100%);
             background-size: 400% 400%;
-            animation: livingShadows 25s ease infinite alternate;
+            animation: liveShadows 25s ease infinite alternate;
             color: var(--text-story); font-family: var(--font-serif);
             height: 100vh; width: 100vw; overflow: hidden;
             user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
         }
-        @keyframes livingShadows {
+        @keyframes liveShadows {
             0% { background-position: 0% 50%; }
             50% { background-position: 100% 50%; }
             100% { background-position: 0% 50%; }
@@ -33,19 +33,22 @@
 
         /* ================= 全局环境装饰（粒子） ================= */
         .bg-mandala {
-            position: absolute; width: 200vw; height: 200vw;
+            position: absolute; width: 200vw; height: 200vh;
             max-width: 1200px; max-height: 1200px; border-radius: 50%;
             background: repeating-radial-gradient(circle, transparent, transparent 40px, rgba(196, 18, 48, 0.03) 41px, transparent 42px);
             top: 50%; left: 50%; transform: translate(-50%, -50%);
             animation: rotateMandala 120s linear infinite; z-index: 0; pointer-events: none;
         }
-        @keyframes rotateMandala { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
+        @keyframes rotateMandala { 
+            from { transform: translate(-50%, -50%) rotate(0deg); } 
+            to { transform: translate(-50%, -50%) rotate(360deg); } 
+        }
 
         /* 悬浮粒子特效 */
         .particles {
             position: absolute; inset: 0; pointer-events: none; z-index: 1;
             background-image: radial-gradient(circle, rgba(196,18,48,0.2) 1px, transparent 1px),
-                              radial-gradient(circle, rgba(240,168,185,0.1) 2px, transparent 2px);
+            radial-gradient(circle, rgba(240,168,185,0.1) 2px, transparent 2px);
             background-size: 80px 80px, 150px 150px;
             animation: particleDrift 80s linear infinite;
         }
@@ -328,18 +331,15 @@
 </head>
 <body>
 
-    <!-- 背景特效群 -->
     <div class="bg-mandala"></div>
     <div class="particles"></div>
     <div class="bg-pattern"></div>
     
-    <!-- 全局复古外框 -->
     <div class="global-frame">
         <div class="g-node gn-tl"></div><div class="g-node gn-tr"></div>
         <div class="g-node gn-bl"></div><div class="g-node gn-br"></div>
     </div>
 
-    <!-- 开始页（包含密码系统） -->
     <div id="start-screen" class="screen active">
         <div class="title-container">
             <div class="title-cn">永恒的执念</div>
@@ -352,16 +352,13 @@
         </div>
     </div>
 
-    <!-- 游戏本体 -->
     <div id="game-screen" class="screen">
         <div id="game-container">
             
             <div id="story-frame">
-                <!-- 哥特边角装饰 -->
                 <div class="sf-corner sfc-tl"></div><div class="sf-corner sfc-tr"></div>
                 <div class="sf-corner sfc-bl"></div><div class="sf-corner sfc-br"></div>
                 
-                <!-- 上下仪式感线条 -->
                 <div class="frame-ornament fo-top"><div class="fo-star">✦</div></div>
                 
                 <div id="story-scroll-area">
@@ -381,7 +378,6 @@
         </div>
     </div>
 
-    <!-- 结局界面 -->
     <div id="ending-screen" class="screen">
         <div class="end-content">
             <div class="end-cn" id="end-cn">我们要永远在一起</div>
