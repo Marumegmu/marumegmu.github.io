@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文字互动 - 深潜叙事版</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Noto+Serif+SC:wght@300;400&display=swap');
+        /* 基础页面设置 */
+        body { margin: 0; padding: 0;
+        background: radial-gradient(circle at 50% -10%, #2A2136 0%, #111116 60%, #050508 100%); color: #EFECE6; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+        display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; user-select: none; -webkit-user-select: none; cursor: pointer;
+        }
+
+        /* 外框设定 */
+        #app-frame { width: 100%;
+        max-width: 400px; height: 90vh; max-height: 820px; background: #0D0D12; border-radius: 44px;
+        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8), inset 0 1px 2px rgba(255, 255, 255, 0.1); position: relative; display: flex;
+        flex-direction: column; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.08); transition: box-shadow 0.3s;
+        }
+        
+        /* 装饰：极弱屏幕扫描线 */
+        .scanlines { position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to bottom, transparent 50%, rgba(0, 0, 0, 0.15) 50%);
+        background-size: 100% 4px; z-index: 40; pointer-events: none; opacity: 0.6; }
+
+        /* 氛围光与互动状态 */
+        #ambient-light { position: absolute;
+        width: 250px; height: 250px; background: radial-gradient(circle, rgba(155, 77, 94, 0.25) 0%, rgba(13, 13, 18, 0) 70%); border-radius: 50%; pointer-events: none;
+        z-index: 0; transform: translate(-50%, -50%); transition: width 1s, height 1s, background 1s; left: 50%; top: 50%;
+        }
+        #sensory-vignette { position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+        background: radial-gradient(circle, transparent 40%, rgba(90, 20, 30, 0.6) 100%); opacity: 0; z-index: 5; pointer-events: none; transition: opacity 1.5s ease-in;
+        }
+        .sensory-overload #sensory-vignette { opacity: 1;
+        }
+        .sensory-overload #reading-panel { filter: blur(2px) contrast(1.1); transform: scale(1.02);
+        border-color: rgba(155, 77, 94, 0.5); }
+
+        /* --- 覆盖层：开始页与结束页 --- */
+        .overlay-screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(13, 13, 18, 0.95);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            z-index: 50;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            opacity: 1; transition: opacity 1.5s ease, visibility 1.5s;
+        }
+        .overlay-screen.hidden { opacity: 0; visibility: hidden; pointer-events: none;
+        }
+        
+        .logo-container { position: relative;
+        margin-bottom: 25px; display: flex; justify-content: center; align-items: center; width: 80px; height: 80px;
+        }
+        .overlay-logo { font-size: 2.2em; color: #E5B585;
+        text-shadow: 0 0 20px rgba(229, 181, 133, 0.3); animation: breathe 3s infinite; z-index: 2;
+        }
+        .hud-ring { position: absolute; width: 100%; height: 100%;
+        border: 1px dashed rgba(229, 181, 133, 0.3); border-radius: 50%; animation: spin 12s linear infinite;
+        }
+        .hud-ring-inner { position: absolute; width: 70%; height: 70%;
+        border: 1px solid rgba(229, 181, 133, 0.1); border-radius: 50%; animation: spin-reverse 8s linear infinite;
+        }
+        
+        .overlay-title { font-family: "Cormorant Garamond", serif;
+        font-size: 1.6em; letter-spacing: 6px; color: #EFECE6; margin-bottom: 8px; }
+        .overlay-subtitle { font-size: 0.65em;
+        letter-spacing: 8px; color: #8C8A85; margin-bottom: 30px; text-transform: uppercase; }
+        
+        .decor-line { position: absolute;
+        font-family: monospace; font-size: 0.45em; letter-spacing: 4px; color: rgba(255, 255, 255, 0.15);
+        }
+        .decor-line.top { top: 60px;
+        }
+        .decor-line.bottom { bottom: 60px;
+        }
+
+        .start-notice { font-size: 0.7em; color: #8C8A85; letter-spacing: 2px; margin-bottom: 20px; text-align: center;
+        line-height: 1.8; opacity: 0.8; }
+        
+        .password-box { display: flex;
+        flex-direction: column; align-items: center; margin-bottom: 25px; }
+        #sys-password {
+            background: transparent;
+            border: none; border-bottom: 1px solid rgba(229, 181, 133, 0.4);
+            color: #E5B585; font-family: monospace; text-align: center; font-size: 0.9em; letter-spacing: 4px;
+            padding: 8px 10px; outline: none; width: 180px; transition: border-color 0.3s, box-shadow 0.3s;
+            -webkit-appearance: none;
+        }
+        #sys-password::placeholder { color: rgba(229, 181, 133, 0.25); letter-spacing: 2px; font-size: 0.8em;
+        }
+        #sys-password:focus { border-bottom-color: #E5B585;
+        box-shadow: 0 10px 10px -10px rgba(229, 181, 133, 0.5); }
+        #pwd-error { color: #9B4D5E;
+        font-size: 0.6em; letter-spacing: 2px; margin-top: 10px; height: 12px; opacity: 0; transition: opacity 0.3s; font-family: monospace;
+        }
+
+        .action-btn { 
+            padding: 15px 40px;
+            border: 1px solid rgba(229, 181, 133, 0.4); border-radius: 30px; 
+            color: #E5B585; font-size: 0.8em; letter-spacing: 4px; background: transparent;
+            transition: all 0.3s ease; box-shadow: 0 0 15px rgba(229, 181, 133, 0.1);
+            position: relative; overflow: hidden; cursor: pointer;
+        }
+        .action-btn:active { transform: scale(0.95); background: rgba(229, 181, 133, 0.1);
+        }
+        
+        .end-text { font-family: "Noto Serif SC", serif;
+        font-size: 0.9em; letter-spacing: 2px; color: #E5B585; margin-top: 10px; margin-bottom: 40px;
+        }
+        .end-data { font-family: monospace; font-size: 0.55em; color: #5C5A56; letter-spacing: 2px; line-height: 2;
+        text-align: center; margin-bottom: 30px; }
+
+        /* 状态栏与顶部 HUD */
+        #app-header { padding: 25px 32px 5px;
+        display: flex; justify-content: space-between; font-size: 0.65em; color: #8C8A85; z-index: 5; font-weight: 300;
+        }
+        
+        #top-hud-bar {
+            position: absolute;
+            top: 55px; width: 100%; padding: 0 35px; box-sizing: border-box;
+            display: flex; justify-content: space-between; align-items: flex-start;
+            z-index: 5; pointer-events: none;
+            opacity: 0; transition: opacity 2s ease;
+        }
+        .app-active #top-hud-bar { opacity: 1;
+        }
+
+        .top-hud-left { display: flex; flex-direction: column; gap: 6px;
+        }
+        .top-hud-title { font-size: 0.45em; letter-spacing: 4px; color: #6C6A65; text-transform: uppercase;
+        }
+        .top-hud-blocks { display: flex; gap: 3px;
+        }
+        .top-hud-blocks span { width: 5px; height: 5px; background: rgba(229, 181, 133, 0.15);
+        border-radius: 1px; }
+        .top-hud-blocks span:nth-child(2) { background: #E5B585;
+        box-shadow: 0 0 6px rgba(229, 181, 133, 0.8); animation: blink 2s infinite;
+        }
+        .top-hud-blocks span:nth-child(4) { background: rgba(229, 181, 133, 0.5);
+        animation: blink 3s infinite reverse; }
+
+        .top-hud-right { text-align: right; display: flex;
+        flex-direction: column; align-items: flex-end; gap: 5px; }
+        .bpm-display { font-family: monospace; font-size: 0.65em;
+        color: #E5B585; letter-spacing: 1px; text-shadow: 0 0 8px rgba(229, 181, 133, 0.4); display: flex; align-items: center;
+        }
+        .bpm-display .heart-icon { font-size: 1.1em; color: #9B4D5E; margin-right: 5px;
+        animation: heartbeat 1.5s infinite; text-shadow: 0 0 8px rgba(155, 77, 94, 0.8);
+        }
+        .sensory-overload .bpm-display .heart-icon { animation: heartbeat 0.4s infinite; color: #D46A7D;
+        } 
+        .session-timer { font-family: monospace; font-size: 0.45em; color: rgba(255, 255, 255, 0.25);
+        letter-spacing: 2px; }
+
+        /* 仪表盘 */
+        #meters-container { position: absolute;
+        top: 110px; bottom: 120px; width: 100%; display: flex; justify-content: space-between; padding: 0 14px; box-sizing: border-box; z-index: 15; pointer-events: none;
+        }
+        .meter-group { display: flex; flex-direction: column; align-items: center; height: 100%; width: 20px;
+        }
+        .meter-label { font-size: 0.52em; letter-spacing: 4px; margin-bottom: 20px; opacity: 0.6; writing-mode: vertical-lr;
+        color: #B5B1A7; font-weight: 300; }
+        .meter-track { flex-grow: 1; width: 1.5px;
+        background: rgba(255, 255, 255, 0.08); position: relative; border-radius: 2px; }
+        .meter-fill { position: absolute;
+        bottom: 0; left: -1px; width: 3.5px; height: 0%; border-radius: 3px;
+        }
+        .fill-pleasure { background: linear-gradient(to top, #9B4D5E, #E5B585);
+        box-shadow: 0 0 12px rgba(229, 181, 133, 0.4); }
+        .fill-wetness { background: linear-gradient(to top, #36607A, #88D4CE);
+        box-shadow: 0 0 12px rgba(136, 212, 206, 0.4); }
+
+        /* 阅读区重构：内部滚动防重叠与自适应间距优化 */
+        #interaction-layer { flex: 1;
+        padding: 20px 46px; z-index: 10; display: flex; flex-direction: column; justify-content: center; pointer-events: none; overflow: hidden;
+        }
+        #reading-panel { background: rgba(18, 18, 20, 0.5); backdrop-filter: blur(12px);
+        border-top: 1px solid rgba(229, 181, 133, 0.15); border-radius: 16px; padding: 35px 24px 25px 24px; min-height: 240px; max-height: 95%; box-sizing: border-box;
+        display: flex; flex-direction: column; box-shadow: 0 15px 35px rgba(0,0,0,0.5); pointer-events: auto;
+        transition: filter 1.5s ease-out, transform 1.5s ease-out, border-color 1.5s ease-out, opacity 2s ease-out;
+        }
+        
+        #story-text { font-family: "Noto Serif SC", serif;
+        font-size: 0.85em; line-height: 1.85; letter-spacing: 1.5px; color: #F4F1EA; text-align: justify; flex: 0 1 auto; min-height: 0; overflow-y: auto; padding-right: 8px;
+        margin-bottom: 0; }
+        /* 故事文本区滚动条美化 */
+        #story-text::-webkit-scrollbar { width: 3px;
+        }
+        #story-text::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); border-radius: 2px;
+        }
+        #story-text::-webkit-scrollbar-thumb { background: rgba(229, 181, 133, 0.3); border-radius: 2px;
+        }
+        
+        /* 交互区：使用 Grid 布局，彻底解决重叠问题 */
+        #interactive-area { position: relative;
+        flex-shrink: 0; display: grid; margin-top: 25px; }
+        
+        #prompt-box { grid-area: 1 / 1;
+        align-self: end; position: relative; padding: 10px 0 10px 18px; opacity: 0; visibility: hidden; transform: translateY(10px);
+        transition: opacity 1.2s ease, transform 1.2s ease; box-sizing: border-box; pointer-events: none;
+        }
+        #prompt-box.active { opacity: 1; visibility: visible; transform: translateY(0); pointer-events: auto;
+        }
+        #prompt-box::before { content: ''; position: absolute; left: 0; top: 15%; bottom: 15%;
+        width: 2px; background: linear-gradient(to bottom, rgba(229, 181, 133, 0), #E5B585, rgba(229, 181, 133, 0));
+        }
+        .prompt-title { color: #8C8A85; font-size: 0.52em; letter-spacing: 4px; margin-bottom: 6px; display:flex;
+        align-items: center;}
+        .prompt-title::after { content: ''; flex-grow: 1; height: 1px;
+        background: linear-gradient(to right, rgba(255, 255, 255, 0.08), transparent); margin-left: 10px;
+        }
+        #prompt-text { color: #E5B585; font-family: "Noto Serif SC", serif; font-size: 0.72em;
+        line-height: 1.6; margin: 0; font-weight: 300; letter-spacing: 1.5px; }
+
+        /* 分支选项样式：加入 Grid */
+        #choices-box { grid-area: 1 / 1;
+        align-self: end; display: flex; flex-direction: column; gap: 10px; opacity: 0; visibility: hidden; transform: translateY(10px);
+        transition: opacity 1.2s ease, transform 1.2s ease; pointer-events: none; padding-bottom: 5px;
+        }
+        #choices-box.active { opacity: 1; visibility: visible; transform: translateY(0); pointer-events: auto;
+        }
+        
+        .choice-btn {
+            background: rgba(18, 16, 22, 0.7);
+            border: 1px solid rgba(229, 181, 133, 0.2);
+            color: #E5B585; font-family: "Noto Serif SC", serif; font-size: 0.75em; letter-spacing: 1.5px;
+            padding: 12px 18px; border-radius: 8px; text-align: left; cursor: pointer;
+            transition: all 0.3s ease; display: flex; align-items: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+        .choice-btn::before { content: '▹'; margin-right: 10px;
+        color: rgba(229, 181, 133, 0.5); font-size: 1.2em; transition: transform 0.3s;
+        }
+        .choice-btn:hover { background: rgba(229, 181, 133, 0.15); border-color: rgba(229, 181, 133, 0.6);
+        box-shadow: 0 0 15px rgba(229, 181, 133, 0.2); }
+        .choice-btn:hover::before { transform: translateX(3px);
+        color: #E5B585; }
+
+        /* 底部氛围装饰区 */
+        #app-footer { position: absolute;
+        bottom: 35px; width: 100%; padding: 0 35px; box-sizing: border-box; display: flex; justify-content: space-between; align-items: center; z-index: 5; pointer-events: none;
+        opacity: 0; transition: opacity 2s ease; }
+        .app-active #app-footer { opacity: 1;
+        }
+        .bio-wave { display: flex; align-items: center; gap: 3px; height: 16px; opacity: 0.8;
+        }
+        .bio-wave span { width: 2px; background: rgba(229, 181, 133, 0.5); border-radius: 2px;
+        animation: waveform 1s infinite alternate ease-in-out; }
+        .bio-wave span:nth-child(1) { height: 40%;
+        animation-delay: 0.1s; }
+        .bio-wave span:nth-child(2) { height: 80%; animation-delay: 0.3s;
+        background: rgba(229, 181, 133, 0.8); box-shadow: 0 0 5px rgba(229, 181, 133, 0.5);}
+        .bio-wave span:nth-child(3) { height: 100%;
+        animation-delay: 0.5s; background: #E5B585; box-shadow: 0 0 8px rgba(229, 181, 133, 0.8);
+        }
+        .bio-wave span:nth-child(4) { height: 60%; animation-delay: 0.2s;
+        }
+        .bio-wave span:nth-child(5) { height: 30%; animation-delay: 0.4s;
+        }
+        
+        .footer-prompt { font-size: 0.5em;
+        letter-spacing: 4px; color: #8C8A85; display: flex; align-items: center; animation: breathe 3s infinite; text-shadow: 0 0 8px rgba(140, 138, 133, 0.3);
+        transition: opacity 0.5s; }
+        .footer-prompt::before, .footer-prompt::after { content: ''; width: 25px; height: 1px;
+        background: rgba(229, 181, 133, 0.25); margin: 0 12px; }
+        .footer-status { font-family: monospace;
+        font-size: 0.45em; letter-spacing: 2px; color: rgba(255, 255, 255, 0.3); text-align: right; line-height: 1.2;
+        }
+
+        @keyframes waveform { 0% { height: 20%; } 100% { height: 100%;
+        } }
+        @keyframes breathe { 0%, 100% { opacity: 0.4; transform: scale(0.98);
+        } 50% { opacity: 1; transform: scale(1.02); } }
+        @keyframes spin { 100% { transform: rotate(360deg);
+        } }
+        @keyframes spin-reverse { 100% { transform: rotate(-360deg);
+        } }
+        @keyframes heartbeat { 0%, 100% { transform: scale(1);
+        } 15% { transform: scale(1.25); } 30% { transform: scale(1); } 45% { transform: scale(1.15);
+        } }
+        @keyframes blink { 0%, 100% { opacity: 0.2;
+        } 50% { opacity: 1; } }
+    </style>
+</head>
+<body>
+    <div id="app-frame">
+        <div class="scanlines"></div>
+        
+        <div id="start-screen" class="overlay-screen">
+            <div class="decor-line top">[ SECURE CONNECTION PROTOCOL ]</div>
+            <div class="logo-container">
+                <div class="hud-ring"></div>
+                <div class="hud-ring-inner"></div>
+                <div class="overlay-logo">◈</div>
+            </div>
+            <div class="overlay-title">SENSORY LINK</div>
+            <div class="overlay-subtitle">全自动AI共感终端</div>
+            
+            <div class="start-notice">请确保您已进入专用测试客房<br>并已佩戴好相关互动设备</div>
+
+            <div class="password-box">
+                <input type="password" id="sys-password" placeholder="ACCESS CODE" autocomplete="off" spellcheck="false" />
+                <div id="pwd-error">ACCESS DENIED</div>
+            </div>
+
+            <div class="action-btn" id="btn-connect">启动AI测试</div>
+            <div class="decor-line bottom">WAITING FOR PAIRING...</div>
+        </div>
+
+        <div id="transition-screen" class="overlay-screen hidden" style="z-index: 45; background: rgba(5, 5, 8, 0.98);">
+            <div class="bpm-display" style="margin-bottom: 25px; font-size: 1.2em; opacity: 0.6;">
+                <span class="heart-icon" id="trans-heart" style="animation: heartbeat 2s infinite;">❤</span>
+                <span id="trans-bpm-val">72</span> BPM
+            </div>
+            <div class="decor-line">[ NEURAL LINK DISCONNECTING... ]</div>
+            <div style="font-family: 'Noto Serif SC', serif; color: #8C8A85; font-size: 0.85em; margin-top: 15px; letter-spacing: 4px; font-weight: 300;">生命体征平稳 · 进入休眠模式</div>
+        </div>
+
+        <div id="end-screen" class="overlay-screen hidden">
+            <div class="decor-line top">[ CONNECTION TERMINATED ]</div>
+            <div class="logo-container">
+                <div class="overlay-logo" style="animation: none; opacity: 0.3; text-shadow: none;">⚬</div>
+            </div>
+            <div class="overlay-title" style="color: #6C6A65;">DISCONNECTED</div>
+            <div class="overlay-subtitle">测试已结束</div>
+            <div class="end-data">
+                SESSION DURATION: <span id="final-time">00:00:00</span><br>
+                PEAK PLEASURE LEVEL: MAX<br>
+                ALL DATA LOCALLY SECURED
+            </div>
+            <div class="end-text">感谢您参与本次内测。</div>
+            <div class="action-btn" id="btn-restart" style="font-size: 0.7em;">重新连接</div>
+            <div class="decor-line bottom">DEVICE IN STANDBY</div>
+        </div>
+
+        <div id="ambient-light"></div>
+        <div id="sensory-vignette"></div>
+        
+        <div id="app-header"><span>内测模式</span><span id="battery-level">86%</span></div>
+        
+        <div id="top-hud-bar">
+            <div class="top-hud-left">
+                <div class="top-hud-title">LOCAL LINK</div>
+                <div class="top-hud-blocks">
+                    <span></span><span></span><span></span><span></span><span></span>
+                </div>
+            </div>
+            <div class="top-hud-right">
+                <div class="bpm-display"><span class="heart-icon">❤</span> <span id="bpm-val">72</span> BPM</div>
+                <div class="session-timer" id="session-timer-val">00:00:00</div>
+            </div>
+        </div>
+
+        <div id="meters-container">
+            <div class="meter-group"><div class="meter-label">快感值</div><div class="meter-track"><div id="pleasure-fill" class="meter-fill fill-pleasure"></div></div></div>
+            <div class="meter-group"><div class="meter-label">水量</div><div class="meter-track"><div id="wetness-fill" class="meter-fill fill-wetness"></div></div></div>
+        </div>
+        
+        <div id="interaction-layer">
+            <div id="reading-panel">
+                <div id="story-text"></div>
+                <div id="interactive-area">
+                    <div id="prompt-box">
+                        <div class="prompt-title">SENSORY PROMPT</div>
+                        <p id="prompt-text"></p>
+                    </div>
+                    <div id="choices-box">
+                    </div>
+                </div>
+            </div>
+         </div>
+
+        <div id="app-footer">
+            <div class="bio-wave"><span></span><span></span><span></span><span></span><span></span></div>
+            <div class="footer-prompt" id="footer-prompt-txt">轻触推进 / 长按过载</div>
+            <div class="footer-status">SYNC_ON<br>LAT:12ms</div>
+        </div>
+    </div>
+
+    <script>
+        const scriptNodes = {
+            "start": {
+                story: `晚上八点，你躺在他家客房那张柔软的大床上，掌心渗出细密的汗珠。认识他这么久，那些潜伏在心底的情愫早已发酵成浓烈的渴望，可你始终不敢捅破那层薄薄的窗户纸。今天他以“缺乏女性生理数据”为由，邀请你来内测他新开发的“全自动AI共感终端”——你当然知道这不过是个借口，可你还是来了，因为你也想借此放纵一次。
+昏黄的壁灯光晕笼罩着整个房间，你把说明书翻来覆去看了三遍，最终还是羞耻地褪去了所有衣物。空气微凉，皮肤泛起细小的颗粒。那台设备躺在床单上，比想象中更精致——内置的温控系统让它带着如真人般的体温，触摸上去几乎令人恍惚。你深吸一口气，将吮吸口轻轻贴上早已敏感的阴蒂，那一瞬间的触感让你的腰肢轻轻颤了颤。你把带有生理弧度的后端对准自己早已湿润的小穴，一点点吞入，润滑得恰到好处的穴口顺从地将它容纳，你忍不住发出一声压抑的轻哼。
+你戴上蓝牙耳机，闭上眼睛，等待着设备启动。心脏跳动的声音在静谧中被无限放大。你知道，一旦它开始运转，你的每一声喘息、每一次痉挛、每一寸隐秘的渴望，都会毫无保留地被记录在那冰冷的数据库里——而你竟然期待着这一切。`,
+                prompt: `平躺下来，双腿微微分开。食指隔着布料从穴缝上方轻轻滑到下方，感受到布料逐渐被浸湿。中指加入一起，在阴蒂位置画着圈按揉，布料被淫水浸透变得透明。`,
+                pleasure: 8, wetness: 12,
+                next: "call_connect"
+            },
+            "call_connect": {
+                story: `手机屏幕亮起的一瞬，耳机里传来平缓却毫无感情的电子合成音，那声音像一根冰冷的探针刺入耳膜：“连接成功。心率检测：105 BPM。启动‘深潜诱导’协议。请测试员放轻松，将控制权完全交接。”
+你本该保持冷静的——可这机械音在这暧昧氤氲的氛围里，显得格外冰冷，仿佛在提醒你即将面对的是一台没有温度的机器。理论上，AI是不会像人类一样拥有感情的，它或许根本不会顾虑你的意愿，为了收集数据，做出什么强制性的行为也未可知。
+你感到小腹深处涌起一股异样的热流，像有什么湿润的东西在悄悄地蔓延。你咬了咬下唇，不自觉地微微敞开双腿，呼吸变得有些急促，心脏跳得更快了些——明明知道接下来会发生什么，身体却已经先一步做出了诚实的反应。`,
+                choices: [
+                    { text: `忍不住用小穴夹紧了玩具：“我准备好了……”`, next: "path_shy" },
+                    { text: `有些羞耻地小声抱怨：“有点太热了……”`, next: "path_eager" }
+                ],
+                pleasure: 15, wetness: 22
+            },
+            "path_shy": {
+                story: `“心率缓缓回落，像潮水退去后的宁静。突然，体内传来一阵微弱的震颤——“预热与浅层唤醒程序启动。”那根深埋在体内的仿真肉棒应声而动，缓缓地蠕动着，像是在试探、在适应。它一点一点地扩张开来，表面的纹理渐渐变得分明，模拟出青筋突起的触感，如同一个极其耐心的爱人，用厚实的手掌在柔软的内壁细细摩挲，温柔地安抚着每一寸颤栗的软肉。与此同时，前端那个精巧的吮吸头也找到了目标——它含住早已悄然挺立的阴蒂，一下接一下，带着规律的节奏，像是在品尝什么珍贵的果实。快感就这样从身体最隐秘的地方开始蔓延，顺着脊背一寸寸攀升，像藤蔓缠绕着神经末梢。你蜷起脚趾，紧紧勾住床单，大腿根部不受控制地微微发抖——喉咙里漏出一声又轻又软的呻吟，像是惊起的涟漪，在寂静的房间里慢慢扩散。`,
+                prompt: `等淫水把指缝染透，再用指腹沾着湿意去揉那粒凸起的阴蒂，两指夹住轻轻捻动。听着水声越来越响，小穴控制不住地一张一合，这时候再把指尖抵住穴口，浅浅地刺进去半截。`,
+                pleasure: 28, wetness: 38,
+                next: "sensory_focus"
+            },
+            "path_eager": {
+                story: `“检测到高敏感反馈，所有模块立刻进入动态适配。它比任何人类情人都更懂你的身体——节奏放缓了，每一下都沉在花心的最深处，又故意退到几乎完全抽离。机械的温度也渐渐降下来，柔软的表层开始随着你的温度做微调，像是有了知觉的皮肤。龟头每一次碾过那粒最敏感的软肉，都会换着角度轻轻顶弄，吮吸的频率也随之改变，像舌尖一样有技巧地挑逗着那颗肿立的阴蒂。可越是这样被照顾，小穴深处就越空虚得发疯——淫水在这种缓慢里越涌越凶，缠着那根肉棒不放。你再也撑不住，仰起修长的脖颈，从喉咙里泄出一声又软又黏的娇吟。`,
+                prompt: `在湿润的入口处用指腹画着圈，让积聚的液体随着指尖滑过每一寸敏感。等阴蒂从包皮里探出小核，再用两指夹住轻轻揉搓。配合呼吸的节奏按压那片兴奋的软肉，感受它在指腹下颤抖着膨胀。`,
+                pleasure: 35, wetness: 48,
+                next: "sensory_focus"
+            },
+            "sensory_focus": {
+                story: `玩具的优势就是不知疲惫，两头都在照顾，它却始终没有停下动作。耳机里的合成音再度响起，节奏依旧不疾不徐：“局部温度37.8度，黏膜湿润度已达标，准备进入第二阶段。为了提供更完美的体验，请测试员如实反馈：目前你的身体……更渴望外层的安抚，还是内里的满足？”不知是不是错觉，那冰冷的机械音里，你竟听出几分好整以暇的意味，他甚至心情不错。`,
+                choices: [
+                    { text: `“外面……想要被舔被吸……”`, next: "focus_clit" },
+                    { text: `“里面……不够……想要更深……”`, next: "focus_depth" }
+                ],
+                pleasure: 45, wetness: 55
+            },
+            "focus_clit": {
+                story: `“指令确认。启动外侧神经剥离。体内的动作倏然变得绵软，像水波般轻缓荡漾，几乎察觉不到移动的迹象，可前端那圈细密的吸盘却悄然加重了力道。它不再施以粗暴的电击，而是化作一根温热灵巧的舌尖，绕着那颗早已充血肿胀的阴蒂一圈一圈缓缓打转。每一次触碰都精准地落在最敏感的顶端，轻轻吮吸，微微拉扯，再倏然松开。快感如潮水般层层堆叠，温柔而绵长，不给你任何喘息的余地。这种极尽精细的折磨让你的身体彻底软成了一滩水，乳尖在空气中颤栗挺立，小穴深处传来一阵阵空虚的收缩，淫水顺着腿根缓缓滑落。你失控地绞紧双腿，却只能一边摇头一边发出甜腻绵长的泣音，整个人都沉溺在这场精心编织的温柔暴力里。`,
+                prompt: `并拢食指中指，缓缓探入湿润紧致的小穴，指腹轻轻刮过内壁。同时用拇指抵住充血挺立的阴蒂，画着圆圈揉按。指尖找到那处略微粗糙的敏感点，由慢到快按压抽送，感受小穴湿热地包裹住手指，让酥麻的快感沿着脊柱攀升。`,
+                pleasure: 58, wetness: 68,
+                next: "edging_phase"
+            },
+            "focus_depth": {
+                story: `“指令确认。深海沉溺模式启动。”那道温柔的低语缓缓退潮，如同海浪悄然撤离。而留在你体内的，是那根柱体开始变得愈发真实的存在——它正一寸、又一寸地，朝着你平日里连指尖都不敢触碰的最深处探去。
+它的表面不再光滑，而是浮现出水波似的、柔和蠕动的纹理。每一次推进，都像在故意放慢节奏，要把你每一寸内壁都温柔地撑开、碾平，直到你觉得自己再也容不下更多。就在抵达你最深、最酸软的那一点时，它停了下来。
+顶端轻轻抵住那儿，然后开始极其温柔地画着圆圈，一下一下研磨着那块因紧张而颤栗的软肉。你被填得太满，几乎连呼吸都得小心翼翼的。那种被彻底贯穿、被温柔蚕食的钝痛与快感交缠在一起，从腹腔深处蔓延至全身，最终化作一声你自己都无法遏制的、绵长又潮湿的泣音：“太深了……啊……”`,
+                prompt: `将手掌轻轻覆上湿润的阴唇，手指并拢，用掌心一下下轻拍。每拍一下，停顿三秒，感受阴蒂传来的酥麻战栗。拍打五下后，用指腹缓慢画圈揉按阴蒂，保持快感积累却不越过高潮的界限，让身体在渴望中逐渐升温。`,
+                pleasure: 62, wetness: 72,
+                next: "edging_phase"
+            },
+            "edging_phase": {
+                story: `快感如潮水般层层叠叠地堆积，眼看就要冲上顶峰。你眼前阵阵发白，脚背绷得笔直，小穴里的淫水裹着玩具，随每一次震动发出黏腻的水声。就在这千钧一发之际，所有的机械运作毫无预兆地戛然而止。那枚折磨人的玩具依旧深深顶在你身体里最敏感的位置，却只剩下了微弱的、若有若无的震颤，像是一只调皮的手在你体内轻轻骚动，却不肯给你一次彻底的释放。乳尖还硬挺挺地翘着，小穴贪婪地收缩着想要更多，阴蒂涨得像颗熟透的樱桃，却在高潮的门槛前被生生按住。
+你不满地扭了扭腰，正要开口抗议，耳机里那道冰冷的机械音突然消失了。取而代之的，是他从隔壁传来的声音，带着几分慵懒的笑意，清晰得仿佛就贴在你耳边低语：“这套程序，感觉怎么样？”他的声音顿了顿，话筒里传来纸张翻动的沙沙声响：“我看你的数据……好像特别喜欢这个玩具呢。”话音落下，那枚停摆的玩具又轻轻震动了一下，像是在配合他话语里的揶揄，却又在你即将抓住快感的瞬间再次静止。`,
+                choices: [
+                    { text: `彻底沦陷，哭着大声哀求他给你高潮。`, next: "beg_loud" },
+                    { text: `羞愤交加，想自己用手指去填补空虚。`, next: "suffer_silent" }
+                ],
+                pleasure: 75, wetness: 82
+            },
+            "beg_loud": {
+                story: `他低沉的声音撞进你耳膜的瞬间，脑海中那些关于他的羞耻画面便不可抑制地翻涌上来，潮红从脖颈一直烧到耳根。你暗自庆幸着，刚刚动情到快要失控时，终究没能把那两个字喊出口。“求你……别停在那里……给我吧……”你眼尾泛着红，嗓音像是揉碎的春水，每一个字都浸满了纵情的渴求。他的叹息在耳机那头响起：“好，不折腾你了。”机器没有骤然发力，而是温柔地把你从濒临崩溃的边缘拉回来，重新回到那个让你既煎熬又沉迷的频率。你的小穴本能地收缩着，像是要把那根凶器吞得更深，淫水顺着大腿根流淌，随着每一次抽送拉出晶莹黏腻的丝线。你整个人都被快感泡软了，连骨头都酥麻。`,
+                prompt: `把手指插进小穴里，感受淫水顺着掌心往下淌。用指尖碾磨阴蒂，打着圈画圆，乳尖硬得发颤。另一只手揉搓着乳肉，指甲轻轻刮过乳头。想象有人看着这具身体，听着手指搅动淫水的声音，腰忍不住往上挺，迎向高潮。`,
+                pleasure: 85, wetness: 90,
+                next: "voice_tease"
+            },
+            "suffer_silent": {
+                story: `你这才后知后觉地发现，那所谓的AI，自始至终都是他精心编织的一场谎言。胸口翻涌的羞耻和恼恨，让你死死咬着下唇，倔强得不肯泄出半点声响。手指颤抖着探向腿间——那儿早已一片泥泞，淫水沿着大腿内侧蜿蜒而下，湿漉漉地往下坠，像你此刻失控的心跳。你咬着牙，执意要自己解决这场难耐的燥热。“手拿开。”他的声音低沉平稳，却带着不容置疑的掌控力。没有怒意，没有责备，只是简简单单的两个字，像一只手轻轻压在你的脊背上，逼你臣服。“乖一点。”话音落下，没有痛楚的惩罚降临。可紧缚着阴蒂的吸盘骤然收紧，像一张柔韧的嘴含住了最敏感的蕊心，微微的吸力让你猝不及防地弓起腰。与此同时，那根仿真肉棒一寸寸撑开你内壁的每一道褶皱，温热的触感沿着穴肉的纹理蔓延开来，将你完完整整地填满。那种被全然掌控的感觉，那种柔软却不容抗拒的力量，像蚕丝一样一层层裹住你。你连呼吸都变得支离破碎。你终于忍不住发出一声呜咽，手指无力地滑落。身体深处被撑到极限的满胀感，让你在令人窒息的快感里不住地发抖。`,
+                prompt: `用中指抵住阴蒂，指尖沾着淫水打转按压。先轻揉三圈，再加重力道画大圈揉弄七圈。每次换手时用乳肉夹住指尖碾磨，让乳尖也沾上淫液。呼吸要配合揉弄节奏，吸气时手指悬停，呼气时深深按下。`,
+                pleasure: 86, wetness: 92,
+                next: "voice_tease"
+            },
+            "voice_tease": {
+                story: `“只是震动了一下，就湿成这样了？”耳机里传来他低沉的轻笑，带着从容的掌控感。“腿再分开些，让我看得清楚点。”他的声音像化不开的夜色，沉甸甸地压在耳膜上。你咬着嘴唇照做了，大腿内侧因为羞耻而微微发抖，穴口却诚实地痉挛着，吐出更多晶亮的淫水。就在你顺从地张开双腿的瞬间，他轻轻敲了下键盘——体内的机器突然变了形状，末端微微上翘，精准地抵住了你最敏感的那一点，前端同时喷出一股温热的液体，顺着你的大腿往下淌。“做得很好，”他在耳机里低声说，声音里带着几分宠溺，“这是奖励你听话的礼物。”那温热的液体还在小穴里缓缓扩散，你的身子因为快感而不住颤抖，连呼吸都乱了节奏。`,
+                prompt: `指尖绕着阴蒂画圈，力度由轻到重地碾磨那颗硬起的肉粒。乳尖被捏住向外拉扯，松开时乳肉回弹的震颤让腰肢不自觉地摆动。当淫水沿着指缝淌下时，猛地用两指夹住阴蒂来回搓揉，同时用拇指戳弄微微翕张的小穴口。`,
+                pleasure: 88, wetness: 92,
+                next: "doorbell_rings"
+            },
+            "doorbell_rings": {
+                story: `就在你被玩具折磨得几乎要疯掉的时候，客房的门把手突然转动了一下。那轻微的金属声响，在你耳边却如同惊雷。耳机里传来他低哑的声音，每个字都像裹着砂纸磨在你皮肤上：“既然你已经被机器弄得这么软了……”他的话语间，是你熟悉的声音，带着沉重脚步声的节奏，一步步逼近这扇门，“我觉得有必要，亲自来验收一下测验成果。”门被推开了。你抬起泪眼朦胧的脸，看向门口的方向。害怕和期待同时在胸口翻涌，像两条相互缠绕的蛇。而体内那根温柔的硅胶，还在不知疲倦地、慢悠悠地进出着你的小穴，它把你最湿软的状态完整地呈现在他眼前。你夹紧腿，想让它停下，却只让淫水浸得更透。`,
+                choices: [
+                    { text: `彻底放弃抵抗，带着玩具向他展示你有多需要他。`, next: "keep_in" },
+                    { text: `羞耻心不允许自己这样做，试图拔出玩具。`, next: "take_out" }
+                ],
+                pleasure: 89, wetness: 94
+            },
+            "keep_in": {
+                story: `一种混杂着羞耻与隐秘快感的堕落电流瞬间贯穿了你。你非但没有拔出那根还在体内微微震动的机器，反而低低地呜咽了一声，腰肢顺从地陷进床褥，主动沿着它顶弄的节奏款款摆动起来。每一次摩擦，都狠狠碾过你湿滑的穴壁，小腹深处涌起一阵酸胀，让你的膝盖不受控制地发软，只能完全塌下腰去承受。下体早已湿得不成样子，滚烫的淫水顺着大腿根往下滑。你伏在床上瑟瑟发抖，喉咙里挤出破碎的、带着哭腔的喘息。等门被推开的时候，你抬起那双泛红带泪的眼尾，目光又软又亮，像只被彻底驯服的小兽，直勾勾地、贪恋地看着门口那个身影。`,
+                prompt: `手掌沿着耻骨向下滑，整片覆盖住湿润的阴部。指腹绕着阴蒂画圈，力道由轻转重。另一只手托起乳肉，拇指拨弄挺立的乳尖。腰肢不自觉地向前送，让穴口更紧地贴住掌心。指尖沿着肉缝上下滑动，停在充血的阴蒂上轻轻搓揉。`,
+                pleasure: 91, wetness: 95,
+                next: "bed_inspection"
+            },
+            "take_out": {
+                story: `仅存的那点羞耻心像最后一根稻草，被你死死攥住。你慌乱地伸手握住玩具底座，想把它从身体里拔出来——可机器只是温柔地“滴”了一声，内部的硅胶组件如同花瓣层层绽开，牢牢卡在了你的内壁上。那触感像是某种活物，正试探性地在你的体内微微翕动。“别乱动，会伤到自己的。”他的声音从门口传来。你抬头，看见他推开门，高大的身躯倚在门框上，眼神晦暗，像一头盯上猎物的兽。你绝望地夹着那根无法退出的庞然大物，眼眶红得快要滴血，浑身颤抖着迎上他的目光。乳尖在空气中发硬，小穴深处的淫水顺着玩具的缝隙往外渗，你连呼吸都变得又浅又急。他知道你跑不掉了，也知道你不会真的想跑。`,
+                prompt: `将指腹探得更深些，触到那处微微粗糙的褶皱，用指甲轻轻搔刮。另一手两指夹住肿胀的阴蒂揉搓，让两处酸麻同时涌上。穴肉开始痉挛绞紧时，就用掌心抵住整个阴阜画圈加压。`,
+                pleasure: 92, wetness: 96,
+                next: "bed_inspection"
+            },
+            "bed_inspection": {
+                story: `高大的阴影笼罩下来，他反手锁死了房门，那平日里斯文温润的面具，在这一刻彻底碎裂。但他并不急着解衣，而是单膝跪在床沿，俯身吻住了你。唇齿相贴之间，他带着薄茧的手指轻轻抚上你的脸颊，指腹摩挲着你微微发烫的皮肤。“你知道么……你答应的那一刻，我心里有多高兴？”他的嗓音低沉，带着一层压抑不住的颤抖，“现在，你终于是我的了。”话音未落，他的另一只手已经探到你腿间。机器感应到他的指纹，不再固执地撑开穴口，顺着淫水无声地滑落，取而代之的是他的手指——带着灼热的温度和不容拒绝的力道，重重地按压在你早已红肿不堪的阴蒂上。你浑身一颤，他的拇指缓慢又恶劣地碾着，像是在确认你每一处敏感的反应。他没有移开视线，始终看着你，看着你在他指下一点一点软下去的样子。`,
+                choices: [
+                    { text: `“因为喜欢你我才会答应的……”`, next: "bed_confess" },
+                    { text: `羞耻地偏过头，咬着唇不敢看他。`, next: "bed_shy" }
+                ],
+                pleasure: 93, wetness: 97
+            },
+            "bed_confess": {
+                story: `他低低笑了一声，指尖的动作却陡然加快，乳尖被他含进口中，舌尖绕着那一点轻轻打转，带着湿热的力道吮吸。不同于机器的均匀规律，他的指腹带着温热的粗糙感，指纹的纹理碾过最敏感的软肉时的触感让身子没法控制地轻轻颤抖，又软又麻的酥痒在那一点上集中，翻涌着蔓延开来。你还没来得及回应，一股细密而猛烈的快感便直冲小腹，将你卷上一个突如其来的小高潮。身子像被电流击中般弓起，腰肢绷成了脆弱的弧线。大腿根轻轻打颤，穴口深处涌出一波又一波温热的春水，沁出穴口，顺着臀缝蜿蜒而下，将他宽厚的手掌完全浸透。那些淫水顺着他的指缝滴落，在安静的房间里发出轻微的水声。`,
+                prompt: `三根手指缓缓推进，感受穴肉紧紧吸附的吸吮感。指节弯曲，向上勾起按压敏感处。另一手用指尖画圈揉弄阴蒂，让湿润的淫水沿着会阴流下。呼吸随着抽插的节奏起伏，让快感从腰腹蔓延到四肢。`,
+                pleasure: 95, wetness: 98,
+                next: "window_carry"
+            },
+            "bed_shy": {
+                story: `“不准躲。”他强硬地把你的脸扳回来，“睁开眼睛，看着你平时最好的朋友，是怎么让你舒服的。”他修长的手指灵巧地拨弄着那颗充血的肉粒，每一次挑逗都精准得可怕，他指尖那种属于人类的、带着侵略性的温度，瞬间击溃了你。你涕泪横流，只能哭着抱住他的手臂，在他的指尖下迎来了一次剧烈的痉挛。`,
+                prompt: `指尖抵住肿胀的阴蒂，画着圈揉弄。另一手两指深深没入小穴，曲起指节勾住那处粗糙的软肉。等淫水浸透手腕，开始用力碾压那两个敏感点。腰肢猛地弹起又落下，小穴剧烈抽搐着喷出透明的汁液。手指不撤退，持续按压颤抖的阴蒂和G点，让高潮的余韵一波波冲刷过整个身体。`,
+                pleasure: 95, wetness: 98,
+                next: "window_carry"
+            },
+            "window_carry": {
+                story: `他的目光一寸寸描摹过你高潮后失神的模样，脸颊泛着潮红，睫毛还在轻轻颤抖。那副被快感碾碎又拼凑起来的狼狈，落在他眼里，像一朵开到了极致的花。欲望在他眼底翻涌，浓得几乎要从瞳仁里溢出来。他没说话，只是低头将瘫软的你打横抱起。几步路，走到了客房那扇冰凉的落地窗前。窗外是城市深夜里川流不息的灯火，车灯拉成流动的河，霓虹倒映在玻璃上。而你浑身赤裸，湿漉漉的身体还淌着透明的淫水，乳尖在冷空气里悄悄挺立，阴蒂还红肿着，微微翕动的穴口正时不时的痉挛。这副淫靡的模样，清晰地印在玻璃上，像是你和他，一起摊开在整座城市面前。`,
+                choices: [
+                    { text: `“不要在窗边……会被看到的……”`, next: "window_shame" },
+                    { text: `彻底沦陷，闭上眼睛向后靠进他怀里。`, next: "window_enjoy" }
+                ],
+                pleasure: 96, wetness: 98
+            },
+            "window_shame": {
+                story: `你望着窗外参差的天际线，瞳孔因恐惧而紧缩。那些玻璃幕墙反射着午后刺眼的光，像无数双眼睛正盯着你赤裸的身体。你徒劳地想合拢发抖的双腿，却被他一只手便轻易制住。他带着笑意的声音拂过耳际，低哑而温柔：“别怕，没人看得到。”可那双手却毫不留情，铁钳般分开你的膝盖，将你的羞耻彻底摊开在透明的空气里。然后他的手指探了进去。不需要太多试探，那条幽径早已被机器开垦得湿热泥泞。他抽出手时，指尖带出一串银亮的水丝，黏腻地垂落在你的大腿根上。他看着那痕渍，眼底暗了暗。紧接着，换上了他自己。那根早已充血发硬、青筋勃起的肉棒抵住你的穴口，滚烫的温度隔着空气都能感受到。他没有急，反而慢得近乎残忍，一寸一寸地碾进去。你湿润的甬道被真实的血肉一厘厘撑开，那种被填满的极致充实，那种被慢慢破开蜷曲的钝重快感，让你不自觉地仰起脖颈，喉咙里溢出一声破碎的、带着哭腔的长吟。`,
+                prompt: `指尖潜入湿润的缝隙，沿着肉缝上下滑动，沾满黏腻的淫水。中指缓缓推进小穴，感受内壁的吸吮，开始快速抽插。拇指按住挺立的阴蒂画圈揉压，乳肉随着喘息轻轻晃动。加快速度，让快感一波波堆积，直到身体绷紧高潮。`,
+                pleasure: 98, wetness: 98,
+                next: "window_glass_press"
+            },
+            "window_enjoy": {
+                story: `到了这一步，你彻底放弃了抵抗。闭上眼，身体不再紧绷，像一片被风吹落的叶，顺势向后，沉进他滚烫的胸膛里。你将最私密的地方摊开给他，没有保留。他发出一声喟叹，像等待已久的猎人终于等来了猎物低头。“真乖……”他低声哄着你，温热的唇贴上你的耳垂，细细地吻，慢慢地含。你的身体轻轻一颤，乳尖不自觉地挺起，小穴里涌出更多湿滑的液体，顺着你的腿根蜿蜒滑落，在夜色里泛着水光。他低头看了一眼，呼吸重了几分。那根早已硬得发烫的肉棒抵在你湿透的入口，没有急着闯入，而是沿着滑腻的缝隙缓缓碾过，擦过你敏感的阴蒂，让那里的一颤一颤地发软、发麻。你还没来得及喘匀气，他就动了。那滚烫的粗长沿着你泥泞的穴口，一寸、一寸地破入深处。他进得很慢，让你清清楚楚地感受自己的身体是怎样被他撑开、填满，每一寸内壁都被灼热熨烫得发颤。你发出一声长长的、变调的呻吟，双手死死抓住他撑在你身侧的手臂，指甲几乎掐进他皮肤的纹理里。他没有停，只是更深地吻上你的后颈，像在安抚，也像在索取。`,
+                prompt: `继续用指腹按压阴蒂画圈揉动，另一只手的手指浅浅抽插小穴。指尖勾住内壁皱褶时稍微用力，感受乳肉随着呼吸起伏。加快揉弄阴蒂的频率，直到那团软肉又开始发烫发硬。膝窝微张，让臀肉沉得更低些，手指被淫水泡得湿滑，撑开穴口时能听见黏腻水声。`,
+                pleasure: 98, wetness: 98,
+                next: "window_glass_press"
+            },
+            "window_glass_press": {
+                story: `落地窗的玻璃贴上赤裸的乳肉，冰得你浑身一颤。可身后那具滚烫的身躯立刻压了上来，从脊背到臀瓣，每一寸肌肤都被他烙得发烫。他扣住你的手腕，强硬地按在玻璃上，十指交握的力道让你指节泛白。“看下面。”他咬住你的耳垂，舌尖顺着耳廓缓缓舔舐，声音低哑得像砂纸打磨过喉咙，“几十层楼下那么多人，只要有人抬个头——”他没说完，胯下猛地一挺。那根粗硬的肉棒整根没入湿漉漉的小穴，花心被撞得酸麻，淫水顺着交合处往下淌。你尖叫着弓起背，眼前的霓虹灯光全碎成了流动的光斑。他的嘴唇贴在你颈侧，一下一下啄吻着跳动的脉搏，下身却不饶人地顶弄起来，把你的身体撞得一下下贴上冰凉的玻璃。小穴里又热又胀，乳尖蹭过玻璃的触感让你抑制不住地颤抖。他忽然松开一只手，向下探去，指尖拨开被淫水浸透的花唇，按住那粒早已充血挺立的阴蒂，打着圈揉弄起来。`,
+                prompt: `揉弄充血挺立的阴蒂，指尖画着圈加重力道压下去。另一手两指并拢插入小穴，指腹摩擦着湿热内壁，感受到软肉绞紧。加快抽插速度，让淫水顺着指缝流下。腰臀随着节奏扭动，迎接即将来临的高潮。`,
+                pleasure: 99, wetness: 99,
+                next: "window_ai_sync"
+            },
+            "window_ai_sync": {
+                story: `就在你快要在这种原始的撞击中迷失时，他把揉弄阴蒂的手抬上来，捏住你的下巴，将你的头转向不远处的穿衣镜。镜中映出你被他从背后贯穿的模样，淫水顺着大腿内侧蜿蜒而下。“看清楚，”他在你耳边低语，声音暗哑，“你是怎么被我操到连站都站不住的。”他掐着你的腰，猛地一个转身，将你压在了落地镜前。冰凉的镜面贴着你的乳肉，你被迫看着镜中自己潮红的脸。他从身后抬高你的一条腿，换了个角度重新插入，那根粗壮的肉棒碾过你每一寸敏感的内壁，龟头狠狠撞在最深处的那点上。你撑在镜面上的手指颤抖着蜷缩，看着身后的他像野兽一样在你体内进出，小穴随着他的抽插不断地吐出白浆。`,
+                choices: [
+                    { text: `受不了视觉的冲击，哭喊着求他不要这样。`, next: "final_climax_beg" },
+                    { text: `在极致的快感中崩溃，主动迎合他的撞击。`, next: "final_climax_wild" }
+                ],
+                pleasure: 99, wetness: 99
+            },
+            "final_climax_beg": {
+                story: `“你抓紧玻璃，身体止不住地发抖，声音里带着哭腔：“求你……关掉它……太刺激了……要坏掉了……”指甲在光滑的表面上无力地划过，留下细细的水痕。他从背后吻上你发烫的耳廓，呼吸灼热地喷在耳边：“变得乱糟糟了。”声音里带着笑意，“好可爱。”他把你翻转过来，背靠着那片冰冷的玻璃。一只手托起你的腿，几乎将你整个人折成承受的姿态。最后一轮冲刺来得又快又狠。你夹在冰凉的玻璃和他滚烫的胸膛之间，每一次整根没入都让玻璃抖出一片雾气。黏稠的水声混着他的低喘在狭窄的空间里回荡。高潮铺天盖地地涌来时，你尖叫出声。滚烫的热流狠狠浇进最深处，你的小穴痉挛着绞紧他，淫水顺着腿根淌下，和玻璃上的水痕混在一起。`,
+                prompt: `指尖抵住那粒胀立的肉珠，画着圈揉捻，另一只手的两指探入湿滑的小穴，微微曲起扣住上壁的软肉。同时发力按压那两点，腰肢会骤然绷紧弹起，淫水猛地喷溅出来。不要停，趁穴肉还在痉挛时继续碾磨阴蒂，让一波波灭顶的快感把意识冲刷成空白。`,
+                pleasure: 100, wetness: 100,
+                next: "aftercare"
+            },
+            "final_climax_wild": {
+                story: `极致的快感撕碎了你最后那点羞耻，你非但没有求饶，反而从喉咙里溢出一串甜腻的呻吟，腰肢像蛇一样扭动，主动迎向他每一次深到发狠的顶弄。你饥渴得连自己都觉得陌生，他眼底的掌控欲却因此烧得更浓。“这么想要？那就全给你。”他话音一落，下半身的撞击便啪啪作响，每一下都又重又深。房间里满是肉体拍打的清脆声响，黏腻的水声裹着你的哭喘。高潮一个接一个涌上来，将你抛上云端又拽入深渊，你在他怀里剧烈地痉挛，乳肉晃荡着，小穴死死绞住他滚烫的肉棒。直到他闷哼一声，将浓稠的精液尽数射进你甬道深处。`,
+                prompt: `指尖抵住凸起的阴蒂，画着圈用力揉压，另一只手的两根手指探入小穴，寻到那块稍显粗糙的G点，弯曲指节向上顶弄。腰肢不由自主地绷紧上弓，淫水顺着指缝汩汩流出。保持这个频率持续按压，直到小穴痉挛着绞紧手指，淫液喷溅而出。让那阵灭顶的快感彻底席卷全身，感受穴肉一次次剧烈收缩。`,
+                pleasure: 100, wetness: 100,
+                next: "aftercare"
+            },
+            "aftercare": {
+                story: `漫长的余韵化作潮水退去后，他小心翼翼地将你搂进怀里，把你抱回了床上——你几乎连一根手指都抬不起来，整个人像被抽空了力气。温水被端来，毛巾的温热一寸寸擦过你汗湿的皮肤，滑过胸口、腰侧，再往下，轻柔地拭去腿间那片狼藉的湿痕。你无力地靠在他宽阔温热的胸膛上，耳边是他沉稳有力的心跳声，一下一下，像在敲打你还没散尽的眩晕。他低下头，唇瓣贴在你眼角的泪痕上，细细吻干。然后他坦白，声音低沉而坦白：“对不起，其实我做这套程序，就是为了今天，能一点一点把你骗进我的怀里。”你没有力气反驳，心里也生不出一丝恼怒。你的小穴还在因为他的侵入而微微抽搐，那股被填满又掏空的余韵还在骨血里游走。你只是闭上眼，深深嗅着他身上熟悉又陌生的气息。你知道，这段维持了多年的朋友关系，在这个夜晚的温存和滚烫里，已经化作了最彻底的沦陷——从心到身体，一丝不剩。`,
+                prompt: `指尖先在湿漉漉的穴口轻轻画圈，让淫水沾满指腹。慢慢把中指滑进小穴，感受内壁还在贪恋地吸吮。手掌心压住阴蒂时，整个身体都会跟着颤抖。再用拇指和食指轻轻揉捏乳尖，软肉在指间微微发硬。`,
+                pleasure: 100, wetness: 100,
+                next: "end"
+            }
+        };
+
+        let currentNodeId = "start";
+        let isTyping = false, typingTimeout, pressTimer;
+        let isOverloadTriggered = false, isAppStarted = false, isAppEnded = false;   
+        let awaitingChoice = false; 
+        
+        let sessionSeconds = 0;
+        let timerInterval, bpmInterval;
+
+        const storyContainer = document.getElementById('story-text'), 
+              promptBox = document.getElementById('prompt-box'), 
+              promptText = document.getElementById('prompt-text'), 
+              choicesBox = document.getElementById('choices-box'),
+              pleasureFill = document.getElementById('pleasure-fill'), 
+              wetnessFill = document.getElementById('wetness-fill'), 
+              appFrame = document.getElementById('app-frame'),
+              startScreen = document.getElementById('start-screen'),
+              endScreen = document.getElementById('end-screen'),
+              btnConnect = document.getElementById('btn-connect'),
+              btnRestart = document.getElementById('btn-restart'),
+              batteryLevel = document.getElementById('battery-level'),
+              sysPassword = document.getElementById('sys-password'),
+              pwdError = document.getElementById('pwd-error'),
+              sessionTimerVal = document.getElementById('session-timer-val'),
+              finalTimeStr = document.getElementById('final-time'),
+              bpmVal = document.getElementById('bpm-val'),
+              footerPromptTxt = document.getElementById('footer-prompt-txt');
+
+        function formatTime(sec) {
+            let h = String(Math.floor(sec / 3600)).padStart(2, '0');
+            let m = String(Math.floor((sec % 3600) / 60)).padStart(2, '0');
+            let s = String(sec % 60).padStart(2, '0');
+            return `${h}:${m}:${s}`;
+        }
+
+        function startSessionTimer() {
+            sessionSeconds = 0;
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                if(!isAppStarted || isAppEnded) return;
+                sessionSeconds++;
+                sessionTimerVal.innerText = formatTime(sessionSeconds);
+                
+                if(isTyping) {
+                    storyContainer.scrollTop = storyContainer.scrollHeight;
+                }
+            }, 1000);
+        }
+
+        function startBPMMonitor() {
+            clearInterval(bpmInterval);
+            bpmInterval = setInterval(() => {
+                if(!isAppStarted || isAppEnded) return;
+                let currentPleasure = parseInt(pleasureFill.style.height) || 0;
+                let baseBPM = 72 + Math.floor((currentPleasure / 100) * 75); 
+                let targetBPM = baseBPM;
+
+                if (isOverloadTriggered) {
+                    targetBPM += Math.floor(Math.random() * 25 + 30);
+                } else {
+                    targetBPM += Math.floor(Math.random() * 6 - 3); 
+                }
+      
+                bpmVal.innerText = targetBPM;
+            }, 1000);
+        }
+
+        function attemptConnection() {
+            if (sysPassword.value === 'maru2040') {
+                pwdError.style.opacity = 0;
+                sysPassword.blur(); 
+                startScreen.classList.add('hidden'); 
+                isAppStarted = true;
+                appFrame.classList.add('app-active'); 
+                startSessionTimer();
+                startBPMMonitor();
+                setTimeout(() => { loadScene(); }, 800);
+            } else {
+                pwdError.style.opacity = 1;
+                sysPassword.style.transform = 'translateX(-5px)';
+                setTimeout(() => sysPassword.style.transform = 'translateX(5px)', 50);
+                setTimeout(() => sysPassword.style.transform = 'translateX(-5px)', 100);
+                setTimeout(() => sysPassword.style.transform = 'translateX(0)', 150);
+            }
+        }
+
+        btnConnect.addEventListener('click', (e) => { e.stopPropagation(); attemptConnection(); });
+        sysPassword.addEventListener('keypress', (e) => { if (e.key === 'Enter') { e.preventDefault(); attemptConnection(); } });
+        btnRestart.addEventListener('click', (e) => {
+            e.stopPropagation();
+            endScreen.classList.add('hidden');
+            startScreen.classList.remove('hidden');
+            sysPassword.value = '';
+            pwdError.style.opacity = 0;
+            currentNodeId = "start";
+            isAppStarted = false;
+            isAppEnded = false;
+            awaitingChoice = false;
+            updateMeters(0, 0, true);
+            storyContainer.innerHTML = '';
+            promptBox.classList.remove('active');
+            choicesBox.classList.remove('active');
+            sessionTimerVal.innerText = "00:00:00";
+            bpmVal.innerText = "72";
+            let currentBat = parseInt(batteryLevel.innerText);
+            batteryLevel.innerText = (currentBat > 20 ? currentBat - 12 : 86) + '%';
+            
+            // 重置阅读面板样式
+            const readingPanel = document.getElementById('reading-panel');
+            readingPanel.style.opacity = '1';
+            readingPanel.style.transform = 'none';
+            readingPanel.style.filter = 'none';
+        });
+
+        function updateMeters(p, w, isReset = false) { 
+            if (isReset) {
+                pleasureFill.style.transition = 'height 1.5s ease-out';
+                wetnessFill.style.transition = 'height 1.5s ease-out';
+            } else {
+                pleasureFill.style.transition = 'height 1.5s cubic-bezier(0.2, 0.8, 0.2, 1)';
+                wetnessFill.style.transition = 'height 1.5s cubic-bezier(0.2, 0.8, 0.2, 1)'; 
+            }
+            void pleasureFill.offsetWidth;
+            pleasureFill.style.height = p + '%'; 
+            wetnessFill.style.height = w + '%';
+        }
+
+        function typeWriter(text, index, callback) {
+            if (index < text.length) { 
+                storyContainer.innerHTML += text.charAt(index);
+                storyContainer.scrollTop = storyContainer.scrollHeight;
+                typingTimeout = setTimeout(() => typeWriter(text, index + 1, callback), 25);
+            } else { 
+                isTyping = false;
+                if(callback) callback(); 
+            }
+        }
+
+        function renderChoices(choices) {
+            choicesBox.innerHTML = '';
+            choices.forEach(choice => {
+                let btn = document.createElement('div');
+                btn.className = 'choice-btn';
+                btn.innerText = choice.text;
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation(); 
+                    if(isTyping) return;
+                    currentNodeId = choice.next;
+                    loadScene();
+                });
+                choicesBox.appendChild(btn);
+            });
+        }
+
+        function loadScene() {
+            const node = scriptNodes[currentNodeId];
+            if (!node) return; 
+
+            updateMeters(node.pleasure, node.wetness, false);
+            storyContainer.innerHTML = ''; 
+            promptBox.classList.remove('active');
+            choicesBox.classList.remove('active');
+            awaitingChoice = false;
+            footerPromptTxt.innerText = "轻触推进 / 长按过载";
+            isTyping = true;
+
+            typeWriter(node.story, 0, () => { 
+                if (node.choices) {
+                    awaitingChoice = true;
+                    renderChoices(node.choices);
+                    choicesBox.classList.add('active');
+                    footerPromptTxt.innerText = "请做出您的选择";
+                    
+                    setTimeout(() => {
+                        storyContainer.scrollTop = storyContainer.scrollHeight;
+                    }, 50);
+                } else if (node.prompt) {
+                    promptText.innerHTML = node.prompt; 
+                    promptBox.classList.add('active');
+                    
+                    setTimeout(() => {
+                        storyContainer.scrollTop = storyContainer.scrollHeight;
+                    }, 50);
+                }
+            });
+        }
+
+        function handleStart(e) {
+            if (!isAppStarted || isAppEnded || awaitingChoice) return;
+            if (e.target.tagName.toLowerCase() === 'input' || e.target.classList.contains('action-btn') || e.target.classList.contains('choice-btn')) return;
+
+            isOverloadTriggered = false;
+            pressTimer = setTimeout(() => { 
+                isOverloadTriggered = true;
+                appFrame.classList.add('sensory-overload'); 
+            }, 400);
+        }
+
+        function handleEnd(e) {
+            clearTimeout(pressTimer);
+            isOverloadTriggered = false;
+            appFrame.classList.remove('sensory-overload'); 
+        }
+
+        function handleClick(e) {
+            if (!isAppStarted || isAppEnded) return;
+            if (e.target.classList.contains('choice-btn') || awaitingChoice) return;
+
+            if (isOverloadTriggered) {
+                isOverloadTriggered = false;
+                return; 
+            }
+            
+            const node = scriptNodes[currentNodeId];
+            if (isTyping) {
+                clearTimeout(typingTimeout);
+                storyContainer.innerHTML = node.story;
+                storyContainer.scrollTop = storyContainer.scrollHeight;
+                isTyping = false;
+                if (node.choices) {
+                    awaitingChoice = true;
+                    renderChoices(node.choices);
+                    choicesBox.classList.add('active');
+                    footerPromptTxt.innerText = "请做出您的选择";
+                } else if (node.prompt) {
+                    promptText.innerHTML = node.prompt;
+                    promptBox.classList.add('active');
+                }
+            } else if (node.next && node.next !== "end") { 
+                currentNodeId = node.next;
+                loadScene(); 
+            } else if (node.next === "end") {
+                isAppEnded = true;
+                clearInterval(timerInterval);
+                clearInterval(bpmInterval);
+                finalTimeStr.innerText = formatTime(sessionSeconds); 
+                
+                // 1. UI 缓慢隐去
+                appFrame.classList.remove('app-active');
+                // 隐藏顶部和底部HUD
+                updateMeters(0, 0, true);
+                // 进度条归零
+                
+                const readingPanel = document.getElementById('reading-panel');
+                readingPanel.style.opacity = '0';
+                readingPanel.style.transform = 'scale(0.95)';
+                readingPanel.style.filter = 'blur(5px)';
+
+                // 获取当前心率用于过渡页
+                const transScreen = document.getElementById('transition-screen');
+                const transBpmVal = document.getElementById('trans-bpm-val');
+                const transHeart = document.getElementById('trans-heart');
+                let currentBpm = parseInt(bpmVal.innerText) || 85;
+                transBpmVal.innerText = currentBpm;
+                // 2. 1.5秒后切入过渡页 (模拟闭上眼睛)
+                setTimeout(() => {
+                    transScreen.classList.remove('hidden');
+                    
+                    // 模拟心跳逐渐平稳下降
+                    let slowDown = setInterval(() => {
+                        currentBpm -= Math.floor(Math.random() * 3 + 1);
+                        if(currentBpm < 65) currentBpm = 65;
+                        transBpmVal.innerText = currentBpm;
+                        // 心跳动画跟着变慢
+                        transHeart.style.animationDuration = (2.5 - (currentBpm - 65) * 0.05) + 's';
+                    }, 600);
+
+                    // 3. 4秒后结束过渡，显示真正的结算数据页
+                    setTimeout(() => {
+                        clearInterval(slowDown);
+                        transScreen.classList.add('hidden');
+                        endScreen.classList.remove('hidden');
+                    }, 4000);
+                }, 1500);
+            }
+        }
+
+        appFrame.addEventListener('mousedown', handleStart);
+        appFrame.addEventListener('touchstart', handleStart, {passive: true});
+        appFrame.addEventListener('mouseup', handleEnd);
+        appFrame.addEventListener('mouseleave', handleEnd);
+        appFrame.addEventListener('touchend', handleEnd);
+        appFrame.addEventListener('touchcancel', handleEnd);
+        appFrame.addEventListener('click', handleClick);
+
+    </script>
+</body>
+</html>
